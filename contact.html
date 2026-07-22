@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>お問い合わせ — Lumina Logic Minds</title>
+
+  <meta name="description" content="株式会社 Lumina Logic Minds へのお問い合わせ。Webサイト・アプリ開発、AI導入・DX推進などのご相談・お見積りを承ります。" />
+  <meta name="theme-color" content="#03070b" />
+
+  <link rel="icon" type="image/png" href="assets/models/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/models/favicon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/contact.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header class="c-header">
+    <a class="c-logo" href="index.html?back=contact">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
+    <a class="c-back" href="index.html?back=contact">← トップへ戻る</a>
+  </header>
+
+  <main class="c-main">
+    <!-- Left: intro -->
+    <section class="c-intro">
+      <p class="c-eyebrow">CONTACT</p>
+      <h1 class="c-title">お問い合わせ</h1>
+      <p class="c-lead">
+        Webサイト・アプリ開発から、AI導入・DX推進まで。<br />
+        ご相談・ご質問など、<br />
+        お気軽にお問い合わせください。
+      </p>
+      <dl class="c-meta">
+        <div><dt>Email</dt><dd>contact@luminalogicminds.jp</dd></div>
+        <div><dt>所在地</dt><dd>〒530-0041<br />大阪府大阪市北区天神橋5丁目7-18<br />天5ミヤコビル401</dd></div>
+      </dl>
+    </section>
+
+    <!-- Right: form -->
+    <section class="c-formwrap">
+      <form class="c-form" method="post" action="#" onsubmit="handleContactForm(event)">
+        <div class="c-field">
+          <label for="contact_name">お名前 <span>*</span></label>
+          <input type="text" id="contact_name" name="contact_name" placeholder="山田 太郎" required />
+        </div>
+
+        <div class="c-field">
+          <label for="contact_company">会社名</label>
+          <input type="text" id="contact_company" name="contact_company" placeholder="株式会社○○" />
+        </div>
+
+        <div class="c-field">
+          <label for="contact_email">メールアドレス <span>*</span></label>
+          <input type="email" id="contact_email" name="contact_email" placeholder="email@example.com" required />
+        </div>
+
+        <div class="c-field">
+          <label for="contact_phone">電話番号</label>
+          <input type="tel" id="contact_phone" name="contact_phone" placeholder="090-0000-0000" />
+        </div>
+
+        <div class="c-field">
+          <label for="contact_subject">件名 <span>*</span></label>
+          <input type="text" id="contact_subject" name="contact_subject" placeholder="お問い合わせの件名" required />
+        </div>
+
+        <div class="c-field">
+          <label for="contact_message">お問い合わせ内容 <span>*</span></label>
+          <textarea id="contact_message" name="contact_message" placeholder="お問い合わせ内容をご記入ください" required></textarea>
+        </div>
+
+        <button type="submit" class="c-submit"><span>送信する</span></button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="c-footer">
+    <div class="c-footer__links">
+      <a href="privacy-policy.html">プライバシーポリシー</a>
+      <a href="tokusho.html">特定商取引法に基づく表記</a>
+    </div>
+    <p>&copy; <span id="year">2025</span> 株式会社 Lumina Logic Minds. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // dynamic copyright year
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Google Apps Script endpoint (same as the existing site -> mail goes to
+    // contact@luminalogicminds.jp, formatted server-side from the JSON keys below)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgA91JAODl9yXLgDDG4yN80DAnPEPypAHuJ3JRScGZ8K9_KriDWIFqjF1qgK44DoQN/exec";
+
+    async function handleContactForm(event) {
+      event.preventDefault();
+      const t = event.target;
+      const formData = {
+        name: t.contact_name.value,
+        company: t.contact_company.value,
+        email: t.contact_email.value,
+        phone: t.contact_phone.value,
+        subject: t.contact_subject.value,
+        message: t.contact_message.value,
+      };
+
+      const submitBtn = t.querySelector(".c-submit");
+      submitBtn.innerHTML = "<span>送信中...</span>";
+      submitBtn.disabled = true;
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors", // avoids CORS; response is opaque, so we assume success
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        setTimeout(() => {
+          alert("お問い合わせありがとうございます。\n送信が完了しました。\n\n内容確認後、担当者よりご連絡させていただきます。");
+          t.reset();
+          submitBtn.innerHTML = "<span>送信する</span>";
+          submitBtn.disabled = false;
+        }, 1000);
+      } catch (err) {
+        console.error("送信エラー:", err);
+        alert("送信に失敗しました。お手数ですが、時間をおいて再度お試しください。");
+        submitBtn.innerHTML = "<span>送信する</span>";
+        submitBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

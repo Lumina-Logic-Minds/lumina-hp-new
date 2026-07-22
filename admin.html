@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理画面 — Lumina Logic Minds</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#03070b" />
+
+  <link rel="icon" type="image/png" href="assets/models/favicon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div class="bg-fx" aria-hidden="true"></div>
+
+  <header class="admin-top">
+    <a class="admin-logo" href="index.html?back=admin">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
+    <nav class="admin-nav">
+      <a href="index.html?back=admin">サイトへ</a>
+      <button id="logout">ログアウト</button>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <p class="admin-eyebrow">Inbox</p>
+        <h1 class="admin-title">お問い合わせ管理</h1>
+      </div>
+      <div class="admin-tools">
+        <input type="text" id="search" placeholder="名前・会社・メール・件名で検索..." />
+        <button class="tool-btn" id="refresh">更新</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>受信日時</th><th>お名前</th><th>会社名</th><th>メール</th><th>件名</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>お問い合わせはありません。</div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+
+  <!-- detail modal -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <button class="modal-close" data-close aria-label="閉じる">×</button>
+      <h2>お問い合わせ詳細</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---- auth guard ----
+    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+      window.location.replace("login.html");
+    }
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgA91JAODl9yXLgDDG4yN80DAnPEPypAHuJ3JRScGZ8K9_KriDWIFqjF1qgK44DoQN/exec";
+    const ITEMS_PER_PAGE = 10;
+
+    let all = [];
+    let filtered = [];
+    let page = 1;
+
+    const rowsEl = document.getElementById("rows");
+    const emptyEl = document.getElementById("empty");
+    const pagerEl = document.getElementById("pagination");
+    const searchEl = document.getElementById("search");
+    const modalEl = document.getElementById("modal");
+    const modalBody = document.getElementById("modal-body");
+
+    document.getElementById("logout").addEventListener("click", () => {
+      sessionStorage.removeItem("isLoggedIn");
+      window.location.href = "login.html";
+    });
+    document.getElementById("refresh").addEventListener("click", loadContacts);
+    searchEl.addEventListener("input", () => { applyFilter(); page = 1; render(); });
+    modalEl.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeModal));
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+    function fmtDate(ts) {
+      const d = new Date(ts);
+      return isNaN(d) ? (ts || "-") : d.toLocaleString("ja-JP");
+    }
+
+    async function loadContacts() {
+      rowsEl.innerHTML = "";
+      emptyEl.hidden = true;
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getContacts`);
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.contacts)) {
+          all = data.contacts.slice().reverse(); // newest first
+        } else {
+          all = [];
+          console.error("取得エラー:", data);
+        }
+      } catch (err) {
+        all = [];
+        console.error("通信エラー:", err);
+        alert("データの取得に失敗しました。時間をおいて「更新」してください。");
+      }
+      applyFilter();
+      page = 1;
+      render();
+    }
+
+    function applyFilter() {
+      const q = searchEl.value.trim().toLowerCase();
+      filtered = !q ? all.slice() : all.filter((c) =>
+        [c.name, c.company, c.email, c.subject, c.message]
+          .some((v) => (v || "").toString().toLowerCase().includes(q))
+      );
+    }
+
+    function render() {
+      rowsEl.innerHTML = "";
+      emptyEl.hidden = filtered.length !== 0;
+
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const slice = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+      slice.forEach((c) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(td(fmtDate(c.timestamp), "col-date"));
+        tr.appendChild(td(c.name || "-"));
+        tr.appendChild(td(c.company || "-"));
+        tr.appendChild(td(c.email || "-"));
+        const subj = (c.subject || "").length > 22 ? c.subject.slice(0, 22) + "…" : (c.subject || "-");
+        tr.appendChild(td(subj, "col-sub"));
+
+        const ops = document.createElement("td");
+        const detail = document.createElement("button");
+        detail.className = "action-btn"; detail.textContent = "詳細";
+        detail.addEventListener("click", () => openDetail(c));
+        const del = document.createElement("button");
+        del.className = "action-btn delete"; del.textContent = "削除";
+        del.addEventListener("click", () => deleteContact(c.id));
+        ops.appendChild(detail); ops.appendChild(del);
+        tr.appendChild(ops);
+
+        rowsEl.appendChild(tr);
+      });
+
+      renderPager();
+    }
+
+    function td(text, cls) {
+      const el = document.createElement("td");
+      el.textContent = text;
+      if (cls) el.className = cls;
+      return el;
+    }
+
+    function renderPager() {
+      pagerEl.innerHTML = "";
+      const total = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+
+      if (searchEl.value.trim()) {
+        const cnt = document.createElement("div");
+        cnt.className = "result-count";
+        cnt.textContent = `検索結果：${filtered.length}件`;
+        pagerEl.appendChild(cnt);
+      }
+      if (total <= 1) return;
+
+      const btn = (label, target, opts = {}) => {
+        const b = document.createElement("button");
+        b.className = "page-btn" + (opts.active ? " active" : "");
+        b.textContent = label;
+        b.addEventListener("click", () => { page = target; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+        return b;
+      };
+      if (page > 1) pagerEl.appendChild(btn("前へ", page - 1));
+      for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || (i >= page - 2 && i <= page + 2)) {
+          pagerEl.appendChild(btn(String(i), i, { active: i === page }));
+        } else if (i === page - 3 || i === page + 3) {
+          const dots = document.createElement("span");
+          dots.className = "page-dots"; dots.textContent = "…";
+          pagerEl.appendChild(dots);
+        }
+      }
+      if (page < total) pagerEl.appendChild(btn("次へ", page + 1));
+    }
+
+    function openDetail(c) {
+      modalBody.innerHTML = "";
+      const rows = [
+        ["受信日時", fmtDate(c.timestamp)],
+        ["お名前", c.name || "-"],
+        ["会社名", c.company || "-"],
+        ["メール", c.email || "-"],
+        ["電話番号", c.phone || "-"],
+        ["件名", c.subject || "-"],
+      ];
+      rows.forEach(([k, v]) => {
+        const row = document.createElement("div");
+        row.className = "detail-row";
+        const dt = document.createElement("dt"); dt.textContent = k;
+        const dd = document.createElement("dd"); dd.textContent = v;
+        row.appendChild(dt); row.appendChild(dd);
+        modalBody.appendChild(row);
+      });
+      const msg = document.createElement("div");
+      msg.className = "detail-message";
+      msg.textContent = c.message || "";
+      modalBody.appendChild(msg);
+
+      modalEl.hidden = false;
+    }
+    function closeModal() { modalEl.hidden = true; }
+
+    async function deleteContact(id) {
+      if (id === undefined || id === null) return;
+      if (!confirm("このお問い合わせを削除してよろしいですか？")) return;
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=deleteContact&id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (data && data.success) {
+          loadContacts();
+        } else {
+          alert("削除に失敗しました：" + ((data && data.error) || "不明なエラー"));
+        }
+      } catch (err) {
+        console.error("削除エラー:", err);
+        alert("削除に失敗しました。");
+      }
+    }
+
+    loadContacts();
+  </script>
+</body>
+</html>

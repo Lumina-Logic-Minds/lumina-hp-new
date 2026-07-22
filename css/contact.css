@@ -1,0 +1,251 @@
+/* =========================================================
+   Contact page — Lumina Logic Minds
+   Cohesive with the top page (dark + glass + gold accent, same
+   fonts) but its own calm, static space (no Three.js scene), and
+   a two-column layout so it does not feel like a copy of the top.
+   ========================================================= */
+:root {
+  --gold: #f1c96b;
+  --gold-deep: #d9a441;
+  --cyan: #39ffe0;
+  --peri: #9ca5ff;
+  --ink: #03070b;
+  --disp: "Chakra Petch", sans-serif;
+  --mono: "Space Mono", monospace;
+  --serif: "Shippori Mincho", serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- calm backdrop: soft teal + periwinkle glows over near-black ---- */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 720px at 12% -5%, rgba(22, 120, 118, 0.22), transparent 60%),
+    radial-gradient(900px 620px at 105% 108%, rgba(90, 100, 175, 0.16), transparent 55%),
+    var(--ink);
+}
+/* faint gold hairline drifting through — a quiet nod to the brand accent */
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(700px 500px at 88% 6%, rgba(241, 201, 107, 0.06), transparent 60%);
+}
+
+/* ===== Header ===== */
+.c-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 6vw;
+  z-index: 10;
+}
+.c-logo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  color: #fff;
+  text-decoration: none;
+}
+.c-logo span {
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  font-weight: 400;
+  color: var(--gold);
+}
+.c-back {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgba(230, 242, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+.c-back:hover { color: var(--gold); }
+
+/* ===== Main : two columns ===== */
+.c-main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 150px 6vw 90px;
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 64px;
+  align-items: start;
+}
+
+/* ---- Left: intro ---- */
+.c-intro { position: sticky; top: 150px; }
+.c-eyebrow {
+  margin: 0 0 14px;
+  font-family: var(--disp);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.c-title {
+  margin: 0 0 26px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(30px, 4vw, 46px);
+  letter-spacing: 0.05em;
+}
+.c-lead {
+  margin: 0 0 36px;
+  font-size: clamp(14px, 1.05vw, 16px);
+  line-height: 1.95;
+  letter-spacing: 0.02em;
+  color: rgba(230, 242, 255, 0.82);
+  word-break: keep-all; /* break only at the explicit <br>, no mid-phrase wrap */
+}
+.c-meta { margin: 0; display: flex; flex-direction: column; gap: 18px; }
+.c-meta > div { display: grid; grid-template-columns: 76px 1fr; gap: 16px; align-items: baseline; }
+.c-meta dt {
+  font-family: var(--disp);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.c-meta dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(235, 245, 255, 0.9);
+}
+
+/* ---- Right: glass form panel ---- */
+.c-form {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(241, 201, 107, 0.18);
+  border-radius: 18px;
+  padding: 42px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.c-field { margin-bottom: 22px; }
+.c-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--disp);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: rgba(240, 246, 255, 0.9);
+}
+.c-field label span { color: var(--gold); }
+.c-field input,
+.c-field textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 15px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.c-field input::placeholder,
+.c-field textarea::placeholder { color: rgba(255, 255, 255, 0.34); }
+.c-field input:focus,
+.c-field textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(241, 201, 107, 0.15);
+}
+.c-field textarea { min-height: 150px; resize: vertical; }
+
+/* ---- Submit : solid gold pill (no gradient, to match the top CTA taste) ---- */
+.c-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  margin: 8px auto 0; /* centre the button within the form panel */
+  padding: 16px 36px;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: #1c1405;
+  background: var(--gold);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(241, 201, 107, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, opacity 0.3s ease;
+}
+.c-submit:hover {
+  background: #ffdd8a;
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(241, 201, 107, 0.55);
+}
+.c-submit:active { transform: translateY(0); }
+.c-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ===== Footer ===== */
+.c-footer {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 38px 6vw 46px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(200, 220, 235, 0.6);
+}
+.c-footer__links {
+  display: flex;
+  gap: 26px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.c-footer__links a {
+  color: rgba(220, 235, 245, 0.75);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+.c-footer__links a:hover { color: var(--gold); }
+
+/* ===== Responsive ===== */
+@media (max-width: 820px) {
+  .c-main {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 120px 7vw 70px;
+  }
+  .c-intro { position: static; top: auto; }
+  .c-form { padding: 32px 26px; }
+}
+@media (max-width: 420px) {
+  .c-header { padding: 18px 6vw; }
+  .c-back { font-size: 12px; }
+}

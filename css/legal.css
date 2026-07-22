@@ -1,0 +1,131 @@
+/* =========================================================
+   Legal pages (privacy policy / tokusho) — Lumina Logic Minds
+   Shares the chrome (header/footer/bg/theme) with contact.css;
+   this file only styles the article content.
+   ========================================================= */
+
+.legal-main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 150px 6vw 90px;
+}
+
+.legal-eyebrow {
+  margin: 0 0 12px;
+  font-family: var(--disp);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--gold);
+}
+.legal-title {
+  margin: 0 0 48px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(26px, 3.4vw, 40px);
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+/* intro / highlighted note box */
+.legal-intro,
+.legal-contactbox {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(241, 201, 107, 0.16);
+  border-radius: 12px;
+  padding: 20px 24px;
+  line-height: 1.9;
+  font-size: 15px;
+  color: rgba(235, 245, 255, 0.9);
+}
+.legal-intro { margin: 0 0 40px; }
+.legal-contactbox { margin: 14px 0 0; }
+.legal-contactbox a { color: var(--gold); }
+
+/* sections */
+.legal-section { margin: 0 0 34px; }
+.legal-section h2 {
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: clamp(17px, 1.6vw, 20px);
+  letter-spacing: 0.04em;
+  color: #fff;
+  border-bottom: 1px solid rgba(241, 201, 107, 0.35);
+}
+.legal-section p {
+  margin: 0 0 12px;
+  line-height: 1.9;
+  font-size: 15px;
+  color: rgba(230, 242, 255, 0.85);
+}
+.legal-section ul {
+  margin: 0;
+  padding-left: 1.4em;
+  line-height: 1.9;
+  font-size: 15px;
+  color: rgba(230, 242, 255, 0.85);
+}
+.legal-section li { margin-bottom: 6px; }
+
+.legal-date {
+  margin-top: 48px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: rgba(220, 235, 245, 0.7);
+}
+
+/* table (tokusho) */
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 40px;
+  font-size: 14px;
+}
+.legal-table th,
+.legal-table td {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.75;
+}
+.legal-table th {
+  width: 210px;
+  background: rgba(241, 201, 107, 0.1);
+  color: var(--gold);
+  font-family: var(--disp);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.legal-table td { color: rgba(235, 245, 255, 0.9); }
+.legal-table a { color: var(--gold); }
+
+@media (max-width: 768px) {
+  .legal-main { padding: 120px 6vw 70px; }
+  .legal-table,
+  .legal-table tbody,
+  .legal-table tr,
+  .legal-table th,
+  .legal-table td { display: block; width: auto; }
+  .legal-table tr {
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .legal-table th {
+    width: auto;
+    white-space: normal;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .legal-table td { border: none; }
+}

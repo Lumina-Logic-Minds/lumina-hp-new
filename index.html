@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Lumina Logic Minds</title>
+
+  <meta name="description" content="Lumina Logic Minds — 光・論理・知性を融合し、没入感のあるデジタル体験を生み出すクリエイティブ・スタジオ。" />
+  <meta name="theme-color" content="#000000" />
+
+  <link rel="icon" type="image/png" href="assets/models/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/models/favicon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Three.js (ES modules) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Skip the intro loader on reload / back-forward / return-from-subpage (runs before paint, so no flash) -->
+  <script>
+    (function () {
+      try {
+        var nav = performance.getEntriesByType("navigation")[0];
+        var t = nav ? nav.type : "navigate";
+        var back = new URLSearchParams(location.search).get("back");
+        if (t === "reload" || t === "back_forward" || back) {
+          document.documentElement.classList.add("skip-intro");
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="company-split">
+  <noscript>
+    <p style="background:#000;color:#fff;font-family:monospace;padding:12px;">JavaScript を有効にしてください。</p>
+  </noscript>
+
+  <!-- ===== Loader ===== -->
+  <div class="loader" id="loader">
+    <div class="loader__logo">LUMINA<span>LOGIC&nbsp;MINDS</span></div>
+    <div class="loader__count"><span id="loaderCount">0</span><i>%</i></div>
+    <div class="loader__bar"><span id="loaderBar"></span></div>
+  </div>
+
+  <!-- ===== Stage ===== -->
+  <div id="Stage">
+    <canvas id="scene"></canvas>
+    <div class="vignette"></div>
+
+    <!-- Bottom-to-top sweep line (Work -> Finale transition) -->
+    <div class="vline" id="vline"></div>
+
+    <!-- Top-right pill navigation -->
+    <header class="nav" id="nav">
+      <div class="nav__pill">
+        <a href="#work" class="nav__link">Work</a>
+        <span class="nav__wave" aria-hidden="true">
+          <svg viewBox="0 0 60 16" width="60" height="16"><path d="M2 8 C 14 1, 20 15, 30 8 S 46 1, 58 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+        <a href="contact.html" class="nav__link">Contact</a>
+      </div>
+    </header>
+
+    <!-- ===== About section (revealed on scroll, behind the big 3D logo) ===== -->
+    <section class="about" id="about" aria-hidden="true">
+      <h2 class="about__title">
+        <span>Where AI</span>
+        <span>Shines Brightest</span>
+        <span>〜AIが最も輝く場所〜</span>
+      </h2>
+      <p class="about__copy">
+        <span class="about__hl">光</span>・<span class="about__hl">論理</span>・<span class="about__hl">知性</span>を融合し、<br />
+        新しい体験のかたちを描く。<br /><br />
+        アイデアを、没入感と性能を兼ね備えた<br />
+        <span class="about__hl">デジタル体験</span>へ。<br /><br />
+        構想から実装まで一貫して、<br />
+        <span class="about__hl">心を動かす</span>ものづくりを。
+      </p>
+    </section>
+
+    <!-- ===== Underwater (final) section text ===== -->
+    <section class="seatext" id="seatext" aria-hidden="true">
+      <h2 class="seatext__title">Let's build<br />something <span>luminous.</span></h2>
+      <p class="seatext__copy">
+        Webサイト・アプリ開発から、<br />
+        AI導入・DX推進まで。<br />
+        まずはご相談ください。
+      </p>
+      <!-- contact.html はこれから作成予定（作成までクリックすると404になります） -->
+      <a class="seatext__link seatext__link--outline" href="contact.html">お問い合わせはこちら <span class="seatext__arrow">→</span></a>
+    </section>
+
+    <!-- ===== Company profile (overlaid on the underwater hex screen) ===== -->
+    <!-- Layout switch on <body>: "company-center" / "company-panel" / "company-split" -->
+    <section class="company" id="company" aria-hidden="true">
+      <div class="company__scrim"></div>
+      <div class="company__inner">
+        <p class="company__eyebrow">COMPANY</p>
+        <h2 class="company__title">会社概要</h2>
+        <dl class="company__list">
+          <div class="company__row"><dt>代表者</dt><dd>細木 駿</dd></div>
+          <div class="company__row"><dt>設立</dt><dd>2025年6月6日</dd></div>
+          <div class="company__row"><dt>資本金</dt><dd>1,000,000円</dd></div>
+          <div class="company__row"><dt>所在地</dt><dd>〒530-0041<br />大阪府大阪市北区天神橋5丁目7-18<br />天5ミヤコビル401</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ===== Work: chat-style navigator (bottom-left) ===== -->
+    <div class="chat" id="chat" aria-hidden="true">
+      <p class="chat__q">What are you looking for?</p>
+      <ul class="chat__list">
+        <li><a href="#">&rarr; AI活用型 Web・アプリケーション開発事業</a></li>
+        <li><a href="#">&rarr; AIシステムインテグレーション・DX推進事業</a></li>
+        <li><a href="#">&rarr; データコンサルティング・MLソリューション事業</a></li>
+        <li><a href="#">&rarr; AI人材リスキリング・教育事業</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Service card detail modal -->
+  <div class="cardmodal" id="cardModal" aria-hidden="true">
+    <div class="cardmodal__backdrop" data-close></div>
+    <div class="cardmodal__panel" role="dialog" aria-modal="true">
+      <button class="cardmodal__close" data-close aria-label="閉じる">×</button>
+      <p class="cardmodal__cat"></p>
+      <h3 class="cardmodal__title"></h3>
+      <p class="cardmodal__catch"></p>
+      <div class="cardmodal__rule"></div>
+      <p class="cardmodal__lead"></p>
+      <p class="cardmodal__body"></p>
+      <a class="cardmodal__more" href="#">詳細ページへ <span>→</span></a>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
