@@ -103,6 +103,7 @@ jobs:
             tools/**
             gas/**
             DEPLOY.md
+            CLAUDE.md
             README.md
             .enc-test/**
             assets/models/brain-top.glb
