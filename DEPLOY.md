@@ -28,14 +28,14 @@ function makeSecret() { console.log(Utilities.getUuid() + Utilities.getUuid()); 
 
 この段階ではまだ何も壊れない（旧コードはこれらを参照しないため）。落ち着いて作業できる。
 
-### 0-2. サーバー側の現状確認
+### 0-2. サーバー側の現状確認 ―― 確認済み（2026-08-02）
 
-ファイルマネージャーで**隠しファイルを表示**に切り替えて、以下を確認する。
-
-- `public_html/luminalogicminds.jp/.htaccess` は存在するか？
-  - **存在する場合、中身を必ず控える。** http→https リダイレクト等が入っている可能性があり、
-    本リポジトリの `.htaccess` で上書きするとそれらが失われる。必要なら両方を統合すること
-- `.htpasswds` に Basic 認証の設定があるか？（現行 admin が保護されている可能性）
+- `public_html/luminalogicminds.jp/.htaccess` は **存在しない**。
+  （ファイルマネージャーの検索で0件。同マネージャーは `.cagefs` 等の隠しフォルダを
+  表示する設定なので、見えていない訳ではなく本当に無い）
+  → 本リポジトリの `.htaccess` をそのまま置いてよい。既存設定を壊す心配はない
+- `.htpasswds` フォルダは存在するが、対象フォルダに `.htaccess` が無いため
+  現在 Basic 認証はかかっていない
 
 ### 0-3. バックアップ
 
@@ -77,39 +77,39 @@ GAS を先にした場合は、現行サイトの管理画面が一覧を表示�
 
 **`error/` は削除しないこと**（カスタムエラーページ。新HPには含まれていない）。
 
-### 手順 1-3. 新ファイルをアップロード
+### 手順 1-3. 自動デプロイを有効にしてプッシュ
 
-`public_html/luminalogicminds.jp/` へ以下をアップロード（合計約71MB）。
+FTPでの手動アップロードは不要になった。GitHub Actions が転送する。
 
-```
-.htaccess
-index.html  contact.html
-reskilling.html  web-development.html          ← 事業詳細ページ（今後3ページ追加予定）
-privacy-policy.html  tokusho.html
-login.html  admin.html
-css/     admin.css  contact.css  legal.css  style.css  service.css
-js/      main.js  login.js  back-link.js  config.js  service-page.js
-assets/models/   brain-top-opt.glb  engine1-opt.glb  planets-opt.glb
-                 rocket-opt.glb  space-opt.glb  spine-opt.glb
-                 favicon.png  logo-white.png
-assets/videos/   card1.mp4 〜 card5.mp4  company-1.mp4  company-2.mp4
-```
+1. `js/config.js` の最終行を `window.LLM_API_URL = API_PRODUCTION;` に変更
+2. `.github/workflows/deploy.yml` の `push:` の3行のコメントを外す
+3. コミットして `main` へプッシュ
 
-> モデルは `-opt` が付いた圧縮版のみを使う。圧縮前の `brain-top.glb` `planets.glb`
-> `rocket.glb` `space.glb` `spine.glb` はコードから参照されておらず、**アップロード不要**
-> （合計55MB）。
+プッシュすると自動で以下が走る。1つでも失敗すれば転送は行われない。
 
-**アップロードしないもの**
-
-| | 理由 |
+| 検査 | 内容 |
 |---|---|
-| `serve.py` | ローカル開発用サーバー。サイトの一部ではない |
-| `gas/` | Apps Script に貼るコード。Web で配信する必要はない |
-| `tools/` | モデル圧縮用スクリプト。開発用 |
-| `DEPLOY.md` | この手順書 |
-| 圧縮前の `.glb` 5本 | `-opt` 版に置き換え済み。参照されていない（55MB） |
-| `.git/` | バージョン管理データ。**公開すると全履歴（旧パスワード含む）が漏れる** |
-| `.DS_Store`（4つ） | macOS が作る不可視ファイル。不要 |
+| Apps Script の向き先 | `config.js` が本番を指しているか（テスト用のままなら停止） |
+| 参照ファイルの存在 | HTML から参照している css/js/画像が実在するか |
+| JavaScript の構文 | 壊れた JS を配信しないため |
+
+**転送されるのは37ファイル・約22.5MB。** 除外設定は `deploy.yml` の `exclude:` に記載
+（`serve.py` `tools/` `gas/` `DEPLOY.md` `.git*` `.DS_Store`、圧縮前の `.glb`/`.mp4`）。
+2026-08-02 の接続テストで、除外が正しく効くことと FTP 接続の成功を確認済み。
+
+#### 設定済みの内容（2026-08-02）
+
+| 項目 | 値 |
+|---|---|
+| FTPアカウント | `deploy@luminalogicminds.jp`（`luminalogicminds.jp` フォルダに限定） |
+| FTPサーバー | `www1111.onamae.ne.jp` |
+| `server-dir` | `/`（アカウントの接続先がサイトのフォルダそのもののため） |
+| GitHub Secrets | `FTP_SERVER` / `FTP_USERNAME` / `FTP_PASSWORD` 登録済み |
+
+#### 手動で実行したい場合
+
+Actions タブ → Deploy to production → Run workflow。
+「接続テストのみ」にチェックを入れると、**ファイルを転送せず接続確認だけ**を行う。
 
 ---
 
@@ -140,19 +140,25 @@ assets/videos/   card1.mp4 〜 card5.mp4  company-1.mp4  company-2.mp4
 
 ## 4. 公開後の宿題
 
-- **動画 14.9MB の再圧縮**（カード5本＋会社紹介2本）。画面上は小さなカード面に貼られるだけなので
-  解像度を落としても目立ちにくい。ffmpeg の導入が必要
 - **遅延読み込み** — `planets-opt.glb` `space-opt.glb` `rocket-opt.glb` と `company-*.mp4` は
   終盤でしか使わないのに起動時に読んでいる。終盤に近づいてから読めば初回がさらに軽くなる
 - **ローダーの進捗表示が偽物** — `js/main.js` 末尾の loader は乱数でカウントしており、実際の
   読み込み状況と無関係。実進捗に繋ぐと体感が改善する
 - 管理画面に Basic 認証（`.htaccess`）を重ねると、さらに一段安全になる
 
-### 済んだ軽量化（2026-08-01）
+### 済んだ軽量化（2026-08-01〜02）
 
-モデル 55.1MB → 13.0MB（76%削減）。初回表示は約70MB → 約27.9MB。
-手法は meshopt 圧縮＋頂点量子化、`planets` はテクスチャの WebP 化。
-**ポリゴンの間引きはしていない**（三角形数は元と完全一致）。再実行するなら:
+初回読み込み 約70MB → **約21MB**（70%削減）。
+
+| | 元 | 後 |
+|---|---|---|
+| モデル | 55.1MB | 13.0MB |
+| 動画 | 14.9MB | 8.1MB |
+
+モデルは meshopt 圧縮＋頂点量子化（`planets` はテクスチャの WebP 化）。
+**ポリゴンの間引きはしていない**（三角形数は元と完全一致）。
+動画は H.264 CRF26 で再圧縮し、カード用のみ 1128x720 → 846x540 に縮小。
+再実行するなら:
 
 ```
 npx @gltf-transform/cli meshopt <入力>.glb <出力>.glb --level high
