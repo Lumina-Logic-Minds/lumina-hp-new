@@ -13,7 +13,8 @@
 #     FTP_USERNAME  : FTPアカウント名
 #     FTP_PASSWORD  : FTPパスワード
 #
-#   サーバー上の公開ディレクトリは下の `server-dir` で指定しています。
+#   FTPアカウントはサイトのフォルダに限定して作成済み（deploy@luminalogicminds.jp）。
+#   そのため server-dir は / でよい。
 
 name: Deploy to production
 
@@ -88,7 +89,10 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps            # 暗号化なしの ftp は避ける。繋がらない場合は ftps-legacy を試す
           local-dir: ./
-          server-dir: public_html/luminalogicminds.jp/
+          # FTPアカウント deploy@luminalogicminds.jp の接続先を
+          # /home/r0940458/public_html/luminalogicminds.jp/ に限定してあるため、
+          # ログイン直後がサイトのフォルダそのもの。よって起点は / になる。
+          server-dir: /
           dangerous-clean-slate: false   # サーバー側の error/ などを消さないため false のまま
           exclude: |
             **/.git*
