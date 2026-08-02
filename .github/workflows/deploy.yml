@@ -19,6 +19,11 @@ name: Deploy to production
 
 on:
   workflow_dispatch:        # 手動実行（Actions タブ → Deploy to production → Run workflow）
+    inputs:
+      dry_run:
+        description: '接続テストのみ（ファイルは転送しない）'
+        type: boolean
+        default: true
   # push:                   # ← 公開後、この3行のコメントを外すと自動デプロイになります
   #   branches:
   #     - main
@@ -38,7 +43,9 @@ jobs:
       # js/config.js がテスト用のデプロイを向いたまま本番へ出ると、
       # 問い合わせフォームも管理画面も検証環境に繋がってしまう。
       # 自動化すると気づけないので、ここで止める。
+      # 接続テスト時は config.js がテスト用を向いていて当然なので、この検査は飛ばす
       - name: Apps Script の向き先が本番か検査
+        if: ${{ !inputs.dry_run }}
         run: |
           if ! grep -q '^window\.LLM_API_URL = API_PRODUCTION;' js/config.js; then
             echo "::error file=js/config.js::本番向けになっていません。最終行を 'window.LLM_API_URL = API_PRODUCTION;' にしてください。"
@@ -70,9 +77,12 @@ jobs:
           echo "OK: 構文エラーなし"
 
       # --- 転送 --------------------------------------------------------------
+      # dry-run を true にすると、接続と差分の確認だけ行い、実際の書き込みはしない。
+      # 公開前に認証情報とディレクトリ指定を検証するために使う。
       - name: FTP でアップロード
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
+          dry-run: ${{ inputs.dry_run == true }}
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
