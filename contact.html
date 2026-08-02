@@ -16,13 +16,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="css/contact.css" />
+  <script src="js/back-link.js" defer></script>
+  <script src="js/config.js"></script>
 </head>
 <body>
   <div class="bg" aria-hidden="true"></div>
 
   <header class="c-header">
-    <a class="c-logo" href="index.html?back=contact">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
-    <a class="c-back" href="index.html?back=contact">← トップへ戻る</a>
+    <a class="c-logo" href="index.html" data-back="contact">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
+    <a class="c-back" href="index.html" data-back="contact">← トップへ戻る</a>
   </header>
 
   <main class="c-main">
@@ -93,12 +95,13 @@
 
     // Google Apps Script endpoint (same as the existing site -> mail goes to
     // contact@luminalogicminds.jp, formatted server-side from the JSON keys below)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgA91JAODl9yXLgDDG4yN80DAnPEPypAHuJ3JRScGZ8K9_KriDWIFqjF1qgK44DoQN/exec";
+    const SCRIPT_URL = window.LLM_API_URL; // お問い合わせ送信先（切り替えは js/config.js）
 
     async function handleContactForm(event) {
       event.preventDefault();
       const t = event.target;
       const formData = {
+        action: "contact", // 明示しておく（GAS 側は action で処理を振り分ける）
         name: t.contact_name.value,
         company: t.contact_company.value,
         email: t.contact_email.value,

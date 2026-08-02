@@ -24,6 +24,8 @@
     }
   }
   </script>
+  <script src="js/back-link.js" defer></script>
+  <script src="js/config.js"></script>
 </head>
 <body>
   <div class="bg-fx" aria-hidden="true"></div>
@@ -31,7 +33,9 @@
   <div id="enter-flash" aria-hidden="true"></div>
 
   <main class="auth-wrap">
-    <form class="auth-card auth-card--hud" id="login-form" autocomplete="off">
+    <!-- is-locked: パスワード欄と LOG IN を伏せた初期状態。
+         隠しコマンド（WITNESS）の完了で解錠される。 -->
+    <form class="auth-card auth-card--hud is-locked" id="login-form" autocomplete="off">
       <span class="hud-corner tl" aria-hidden="true"></span>
       <span class="hud-corner tr" aria-hidden="true"></span>
       <span class="hud-corner bl" aria-hidden="true"></span>
@@ -41,14 +45,17 @@
       <h1 class="auth-title">ADMINISTRATOR</h1>
 
       <div class="auth-field">
+        <!-- このラベルは隠さないこと。隠しコマンド "WITNESS" の W は、
+             ページ内でここ（Password）にしか存在しない。 -->
         <label for="password">Password</label>
+        <p class="auth-lock" aria-hidden="true">— ACCESS LOCKED —</p>
         <input type="password" id="password" autocomplete="current-password" required />
       </div>
 
       <button type="submit" class="auth-btn">LOG IN</button>
       <p class="auth-error" id="err" hidden>パスワードが違います。</p>
 
-      <a class="auth-back" href="index.html?back=login">← サイトへ戻る</a>
+      <a class="auth-back" href="index.html" data-back="login">← サイトへ戻る</a>
     </form>
   </main>
 
@@ -62,25 +69,55 @@
       setTimeout(() => flash.remove(), 1300);
     });
 
-    // simple client-side gate (same as the existing site — not real security)
-    const ADMIN_PASSWORD = "WitShu#0224$0402";
+    // パスワードは Apps Script 側のスクリプトプロパティに置き、照合もサーバーで行う。
+    // ここに書くと閲覧者全員に見えてしまうため（以前はここに平文で置いていた）。
+    const API_URL = window.LLM_API_URL; // 認証エンドポイント（切り替えは js/config.js）
     const form = document.getElementById("login-form");
     const err = document.getElementById("err");
+    const pwEl = document.getElementById("password");
+    const btn = form.querySelector(".auth-btn");
 
-    form.addEventListener("submit", (e) => {
+    function showError(msg) {
+      err.textContent = msg;
+      err.hidden = false;
+      const card = document.querySelector(".auth-card");
+      card.classList.remove("shake");
+      void card.offsetWidth; // restart the animation
+      card.classList.add("shake");
+      pwEl.select();
+    }
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const pw = document.getElementById("password").value;
-      if (pw === ADMIN_PASSWORD) {
-        sessionStorage.setItem("isLoggedIn", "true");
-        window.location.href = "admin.html";
-      } else {
-        err.hidden = false;
-        const card = document.querySelector(".auth-card");
-        card.classList.remove("shake");
-        void card.offsetWidth; // restart the animation
-        card.classList.add("shake");
-        document.getElementById("password").select();
+      if (form.classList.contains("is-locked")) return; // 解錠前は送信しない
+
+      err.hidden = true;
+      btn.disabled = true;
+      const btnLabel = btn.textContent;
+      btn.textContent = "AUTHENTICATING...";
+
+      try {
+        // Content-Type を text/plain にするとプリフライト(OPTIONS)が発生しないため、
+        // Apps Script から応答を読み取れる。application/json だと CORS で失敗する。
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "login", password: pwEl.value }),
+        });
+        const data = await res.json();
+        if (data && data.success && data.token) {
+          sessionStorage.setItem("adminToken", data.token);
+          window.location.href = "admin.html";
+          return; // 遷移するのでボタンは戻さない
+        }
+        showError((data && data.error) || "パスワードが違います。");
+      } catch (netErr) {
+        console.error("認証エラー:", netErr);
+        showError("通信に失敗しました。時間をおいて再度お試しください。");
       }
+
+      btn.disabled = false;
+      btn.textContent = btnLabel;
     });
 
     // ---- hidden "WITNESS" route: click the letters W-I-T-N-E-S-S in order
@@ -123,15 +160,17 @@
             used.push(s);
             idx++;
             if (idx === SEQ.length) {
-              // completion action: letters flip cyan -> gold in a wave, card flares, then login
+              // completion action: letters flip cyan -> gold in a wave, the card flares,
+              // and the password field is revealed. The password itself is still required —
+              // this route unlocks the form, it does not bypass authentication.
               used.forEach((el, i) => {
                 setTimeout(() => { el.classList.remove("wlit"); el.classList.add("wdone"); }, i * 150);
               });
               document.querySelector(".auth-card").classList.add("auth-card--unlocked");
               setTimeout(() => {
-                sessionStorage.setItem("isLoggedIn", "true");
-                window.location.href = "admin.html";
-              }, 2300);
+                form.classList.remove("is-locked");
+                pwEl.focus();
+              }, SEQ.length * 150 + 250); // 文字の波が流れ切ってから
             }
           } else {
             reset(); // wrong letter -> back to the initial state

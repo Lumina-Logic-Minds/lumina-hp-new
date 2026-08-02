@@ -12,6 +12,11 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshSurfaceSampler } from "three/addons/math/MeshSurfaceSampler.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
+/* すべての .glb をこの1つのローダーで読む。meshopt 圧縮された GLB は
+   デコーダーを設定したローダーでないと読めないため、個別に new せず共有する。 */
+const gltfLoader = new GLTFLoader();
+gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+
 /* =========================================================
    Lumina Logic Minds — STEP 1: TOP section
    Black/teal void · chrome-glass ring+LLM logo · drifting
@@ -35,6 +40,31 @@ scene.fog = new THREE.FogExp2(0x02070b, 0.034);
 
 const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
 camera.position.set(0, 0, 12);
+
+/* 縦長の画面では横方向の視野が狭くなる。FOV は縦基準なので、画面が細いほど
+   横に映る範囲だけが縮み、PC 向けに寸法を決めた 3D が左右にはみ出す。
+   Work の背骨＋カードと Finale のヒーローカードだけを一律に縮めて収める。
+   TOP のロゴや森は現状で収まっているため、カメラ側は触らない。
+   CSS の 768px ブレークポイントに合わせる。 */
+const narrowMQ = window.matchMedia("(max-width: 768px)");
+let isNarrow = narrowMQ.matches;
+narrowMQ.addEventListener("change", (e) => { isNarrow = e.matches; });
+/* 縮小率は画面比率から連続的に決める。768px のような固定の境界だと、
+   820x1180 のような縦長タブレットを取りこぼしてはみ出したままになるため。
+   FIT_GAIN は「縦長端末でカードが画面幅の 7〜8 割を占める」ように決めた係数。
+   小さくすると余白が増え、大きくすると画面いっぱいに近づく。 */
+const DESIGN_ASPECT = 16 / 9;   // 寸法を決めたときの想定画面比
+const FIT_GAIN = 2.0;
+const fitScale = () =>
+  Math.min(1, Math.max(0.4, (camera.aspect / DESIGN_ASPECT) * FIT_GAIN));
+
+/* 会社紹介動画を映すヘックスグリッドは横 16 ユニットあり、そのままでは縦長画面から
+   大きくはみ出す。タイルの UV は局所座標で決まるので、メッシュを縮めても映像の
+   割り付けは崩れない。ワールド座標で書いている粒子の充填と当たり判定だけ、
+   同じ倍率を掛けて合わせる。 */
+const HEX_GAIN = 2.35;
+const HEX_FIT = Math.min(1, Math.max(0.45, (window.innerWidth / window.innerHeight) / DESIGN_ASPECT * HEX_GAIN));
+const VIS_HALF_W = 7.81 * (window.innerWidth / window.innerHeight); // 画面半幅（ワールド単位・実測から）
 
 /* Environment for reflections (chrome/glass) */
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -176,7 +206,7 @@ for (let s = 0; s < 2; s++) {
 // centre of the logo: brain-top.glb (replaces the "LLM" letters), ring + spiral unchanged
 const llmGroup = new THREE.Group();
 logo.add(llmGroup);
-new GLTFLoader().load("assets/models/brain-top.glb", (gltf) => {
+gltfLoader.load("assets/models/brain-top-opt.glb", (gltf) => {
   const model = gltf.scene;
   model.traverse((o) => { if (o.isMesh) o.material = glassMat; });
   let box = new THREE.Box3().setFromObject(model);
@@ -507,9 +537,8 @@ work.add(spine);
 
 // Load a real spine model if present (assets/models/spine.glb). Until then the
 // placeholder above is shown. On success it's swapped in, glassed, and fitted.
-const gltfLoader = new GLTFLoader();
 gltfLoader.load(
-  "assets/models/spine.glb",
+  "assets/models/spine-opt.glb",
   (gltf) => {
     const model = gltf.scene;
     model.traverse((o) => { if (o.isMesh) o.material = spineMat; });
@@ -618,28 +647,31 @@ function makeCardTexture(title, tag, c1, c2, textOnly) {
 const projects = [
   {
     t: "AI活用型 Web・アプリケーション開発事業", g: "AI Web & App Development", a: "#13303d", b: "#0e7c7b",
-    video: "assets/videos/card1.mp4",
+    video: "assets/videos/card1-opt.mp4",
     catch: "AIの力で、ホームページやアプリを「早く・安く・高品質」に",
     lead: "企画から実装、保守まで全工程に生成AIを導入。要件定義の高速化やコード生成を駆使し、従来の手法を凌駕する「短納期・高品質・低コスト」な開発を実現します。",
     body: "「こんなサイトが欲しい」「こんなアプリがあれば便利なのに」そんなアイデアを形にします。企画段階から完成後のメンテナンスまで、すべての工程にAIを活用することで、従来よりも短い期間・低いコストで、クオリティの高いものをお届けできます。",
+    more: "web-development.html", // 詳細ページ
   },
   {
     t: "AIシステムインテグレーション・DX推進事業", g: "AI System Integration / DX", a: "#241f4a", b: "#6c5ce7",
-    video: "assets/videos/card2.mp4",
+    video: "assets/videos/card2-opt.mp4",
     catch: "会社の仕事のやり方を、AIでもっと楽に・賢く",
     lead: "業務課題の抽出からAI導入、定着化までトータルサポート。データ整備や業務フロー再構築にも踏み込み、ビジネスモデルそのものをAI前提へと変革させます。",
     body: "「毎日の事務作業が大変」「紙の書類が多すぎる」そうした日々の業務の悩みを分析し、AIを使って効率化します。ただツールを導入するだけでなく、現場に定着するところまで見据えた仕組みづくりを行います。",
+    more: "dx.html", // 詳細ページ
   },
   {
     t: "データコンサルティング・MLソリューション事業", g: "Data Consulting / ML Solutions", a: "#3a1f3d", b: "#c84bd1",
-    video: "assets/videos/card3.mp4",
+    video: "assets/videos/card3-opt.mp4",
     catch: "会社に眠っているデータから、「売上アップのヒント」を見つけ出す",
     lead: "ビッグデータ解析や特化型ML（機械学習）モデルの構築により、データから利益を創出。需要予測やリスク管理など、経営判断に直結する「データドリブン経営」を支援します。",
     body: "日々の売上記録やお客様の情報など、蓄積されたデータをAIが分析し、「次に何が売れそうか」「どこにリスクがあるか」を予測します。勘や経験だけに頼らず、データに基づいた経営判断ができるようになります。",
+    more: "data-ml.html", // 詳細ページ
   },
   {
     t: "AI人材リスキリング・教育事業", g: "AI Reskilling / Education", a: "#2d1b3a", b: "#9ca5ff",
-    video: "assets/videos/card5.mp4",
+    video: "assets/videos/card5-opt.mp4",
     catch: "「AIを使える人材」を、実践的なカリキュラムで育てる",
     lead: "開発現場のノウハウを元にした実践的なカリキュラムで、即戦力となるAI人材を育成。優秀な修了生の採用エコシステムも構築し、業界全体の人材不足解消に貢献します。",
     body: "実際の開発現場で培ったノウハウをもとに、教科書的な知識だけでなく、すぐに仕事で活かせるスキルが身につくカリキュラムを提供しています。企業の研修や個人のスキルアップなど、目的に合わせた学び方をご用意しています。",
@@ -649,10 +681,11 @@ const projects = [
 // GPU事業はWorkの周回カードから外し、Finaleで粒子が形成する「ヒーローカード」になる
 const finaleProject = {
   t: "GPUインフラ・コンピューティング事業", g: "GPU Infrastructure / Computing", a: "#0f2a2c", b: "#2bb3a3",
-  video: "assets/videos/card4.mp4",
+  video: "assets/videos/card4-opt.mp4",
   catch: "AIを動かす「超高性能なコンピュータ環境」を、すぐ使える状態で提供",
   lead: "世界的に不足する高性能GPUサーバー環境を構築し、計算資源を安定提供。環境最適化や保守運用を含めたマネージドサービスを展開し、インフラ面からAI開発を支えます。",
   body: "AIの開発や運用には、普通のパソコンでは到底足りない膨大な計算能力が必要です。世界的に不足しているこの高性能な計算環境を、面倒なセットアップや管理の手間なく、すぐにご利用いただけます。",
+  more: "gpu.html", // 詳細ページ
 };
 const cardGeo = new THREE.PlaneGeometry(4.8, 3.0); // larger cards
 const cards = [];
@@ -817,12 +850,20 @@ for (let i = 0; i < FINALE_COUNT; i++) {
 }
 // The first N_WORD particles form the 3-line wordmark (Lumina / Logic / Minds);
 // the rest are cloud-only — they disperse upward and fade as the wordmark forms.
-const wordPts = sampleTextLines(["Lumina", "Logic", "Minds"], N_WORD, 10.5, 5.4, 1.1);
+/* ワードマークは横幅 10.5 とカード(6.0)より大きく、同じ縮小率では収まらないので
+   専用の係数を持つ。生成時に一度だけ確定させ、以降の判定もこの値から導く。 */
+const WORD_GAIN = 2.1;
+const WORD_SCALE = Math.min(1, Math.max(0.5, (camera.aspect / DESIGN_ASPECT) * WORD_GAIN));
+const WORD_W = 10.5 * WORD_SCALE;
+const WORD_H = 5.4 * WORD_SCALE;
+const WORD_Y = -7.2;                 // 水中でワードマークが座る高さ
+const WORD_LINE_GAP = WORD_H / 3;    // 3行ぶんの行間
+const wordPts = sampleTextLines(["Lumina", "Logic", "Minds"], N_WORD, WORD_W, WORD_H, 1.1);
 for (let i = 0; i < FINALE_COUNT; i++) {
   if (i < N_WORD) {
     const p = wordPts[i];
     // wordmark now forms UNDERWATER (lowered to sit above the hex grid at y -8)
-    fnTarget[i*3+0] = p[0]; fnTarget[i*3+1] = p[1] - 7.2; fnTarget[i*3+2] = p[2];
+    fnTarget[i*3+0] = p[0]; fnTarget[i*3+1] = p[1] + WORD_Y; fnTarget[i*3+2] = p[2];
     fnLLM[i] = 1.0; fnDark[i] = p[3]; fnExtra[i] = 0;
     const jx = (Math.random() - 0.5) * 0.5, jy = (Math.random() - 0.5) * 0.5;
     const l = Math.hypot(jx, jy, 1);
@@ -857,7 +898,8 @@ const letterHit = [null, null, null]; // [Lumina L, Logic L, Minds M]
   for (let i = 0; i < N_WORD; i++) {
     if (fnDark[i] !== 1) continue;
     const y = fnTarget[i * 3 + 1];
-    const li = y > -6.3 ? 0 : (y > -8.1 ? 1 : 2); // lines sit at ~ -5.4 / -7.2 / -9.0
+    const li = y > WORD_Y + WORD_LINE_GAP / 2 ? 0
+              : (y > WORD_Y - WORD_LINE_GAP / 2 ? 1 : 2);
     buckets[li][0] += fnTarget[i * 3 + 0];
     buckets[li][1] += y;
     buckets[li][2] += 1;
@@ -875,7 +917,7 @@ for (let l = 0; l < 3; l++) {
     map: makeGlow(), color: 0xf1c96b, transparent: true, opacity: 0,
     depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
   }));
-  sp.scale.set(1.6, 1.6, 1);
+  sp.scale.set(1.6 * WORD_SCALE, 1.6 * WORD_SCALE, 1);
   if (letterHit[l]) sp.position.copy(letterHit[l]);
   sp.renderOrder = 6;
   sp.visible = false;
@@ -976,7 +1018,7 @@ for (let i = 0; i < FINALE_COUNT; i++) { // sphere fallback until the glb is sam
   shapeRocket[i*3+2] = Math.sin(phi) * Math.sin(u) * ENT_R;
 }
 const SHAPES = [shapeRocket];
-new GLTFLoader().load("assets/models/rocket.glb", (gltf) => {
+gltfLoader.load("assets/models/rocket-opt.glb", (gltf) => {
   let mesh = null;
   gltf.scene.traverse((o) => { if (o.isMesh && !mesh) mesh = o; });
   if (!mesh) return;
@@ -1036,7 +1078,7 @@ const rocketRimMat = new THREE.ShaderMaterial({
 // these if the rocket still leans (yaw = left/right, pitch = up/down).
 const ROCKET_YAW = -0.32;   // more left-correction
 const ROCKET_PITCH = 0.16;  // raise the nose (was pointing slightly down)
-new GLTFLoader().load("assets/models/rocket.glb", (gltf) => {
+gltfLoader.load("assets/models/rocket-opt.glb", (gltf) => {
   const m = gltf.scene;
   const meshes = [];
   m.traverse((o) => { if (o.isMesh) meshes.push(o); });
@@ -1082,7 +1124,7 @@ function travelAt(s) {
 const spaceEnv = new THREE.Group();
 spaceEnv.visible = false;
 scene.add(spaceEnv);
-new GLTFLoader().load("assets/models/space.glb", (gltf) => {
+gltfLoader.load("assets/models/space-opt.glb", (gltf) => {
   const m = gltf.scene;
   // make it render from inside (skybox-style), unaffected by fog, and don't occlude
   m.traverse((o) => {
@@ -1114,7 +1156,7 @@ new GLTFLoader().load("assets/models/space.glb", (gltf) => {
 const planetsEnv = new THREE.Group();
 planetsEnv.visible = false;
 scene.add(planetsEnv);
-new GLTFLoader().load("assets/models/planets.glb", (gltf) => {
+gltfLoader.load("assets/models/planets-opt.glb", (gltf) => {
   const m = gltf.scene;
   m.traverse((o) => {
     if (!o.isMesh) return;
@@ -1134,8 +1176,8 @@ new GLTFLoader().load("assets/models/planets.glb", (gltf) => {
   m.position.set(-ctr.x * s, -ctr.y * s, -ctr.z * s);
   planetsEnv.add(m);
   planetsEnv.position.set(0, 2, -72); // far ahead -> grows as the entity charges in
-  console.log("planets.glb loaded; raw size:", sz.x.toFixed(1), sz.y.toFixed(1), sz.z.toFixed(1));
-}, undefined, () => console.warn("planets.glb not found"));
+  console.log("planets-opt.glb loaded; raw size:", sz.x.toFixed(1), sz.y.toFixed(1), sz.z.toFixed(1));
+}, undefined, () => console.warn("planets-opt.glb not found"));
 
 /* --- Finale HERO CARD layout ---------------------------------------------
    The wordmark particles first converge into a CARD-shaped point cloud (a
@@ -1145,8 +1187,8 @@ new GLTFLoader().load("assets/models/planets.glb", (gltf) => {
 const FCARD_W = 6.2, FCARD_H = 3.9;                 // real card size (units)
 const FCARD_POS = new THREE.Vector3(0, -1.8, 1.0);  // card sits here, facing camera
 const fnCard = new Float32Array(FINALE_COUNT * 3);
-const fillHalfW = FCARD_W / 2;  // particle fill matches the card exactly (no overhang)
-const fillHalfH = FCARD_H / 2;
+const fillHalfW = FCARD_W / 2 * fitScale();  // particle fill matches the card exactly (no overhang)
+const fillHalfH = FCARD_H / 2 * fitScale();
 for (let i = 0; i < FINALE_COUNT; i++) {
   if (i < N_WORD) {
     // word particles fill the card rectangle (slightly BEHIND the card plane)
@@ -1251,7 +1293,7 @@ fcText.position.z = 0.06;
 finaleCard.add(fcText);
 let finaleCardHot = false; // pointer is hovering the hero card (-> clickable)
 
-// Finale ROOM (engine.glb) — the chamber the brain forms inside. Tunable scale/offset.
+// Finale ROOM (engine1-opt.glb) — the chamber the brain forms inside. Tunable scale/offset.
 const ROOM_SCALE = 40;          // fit largest dimension to this many units
 const ROOM_OFFSET = new THREE.Vector3(0, 0, 0); // centred — brain sits in the middle
 // tilted clip plane: room is "painted in" from the bottom up, but slightly diagonal
@@ -1261,9 +1303,7 @@ const finaleEnterPlane = new THREE.Plane(finaleClipN.clone(), 1000);
 const room = new THREE.Group();
 room.visible = false;
 scene.add(room);
-const roomLoader = new GLTFLoader();
-roomLoader.setMeshoptDecoder(MeshoptDecoder); // optimized GLB uses meshopt compression
-roomLoader.load("assets/models/engine1-opt.glb", (gltf) => {
+gltfLoader.load("assets/models/engine1-opt.glb", (gltf) => {
   const m = gltf.scene;
   const box = new THREE.Box3().setFromObject(m);
   const ctr = new THREE.Vector3(); box.getCenter(ctr);
@@ -1277,8 +1317,8 @@ roomLoader.load("assets/models/engine1-opt.glb", (gltf) => {
     mats.forEach((mat) => { if (mat) mat.clippingPlanes = [finaleEnterPlane]; });
   });
   room.add(m);
-  console.log("engine.glb loaded; size:", sz.x.toFixed(1), sz.y.toFixed(1), sz.z.toFixed(1));
-}, undefined, () => console.warn("assets/models/engine.glb not found"));
+  console.log("engine1-opt.glb loaded; size:", sz.x.toFixed(1), sz.y.toFixed(1), sz.z.toFixed(1));
+}, undefined, () => console.warn("assets/models/engine1-opt.glb not found"));
 
 /* =========================================================
    Section 6 — UNDERWATER : water surface (caustics) overhead, rising bubbles,
@@ -1375,6 +1415,15 @@ const hexGeo = new THREE.CircleGeometry(HEX_R, 6);
 hexGeo.rotateZ(Math.PI / 6); // pointy-top
 const hexW = Math.sqrt(3) * HEX_R, hexH = 2 * HEX_R, vSpace = hexH * 0.75;
 const gridW = HEX_COLS * hexW, gridH = HEX_ROWS * vSpace;
+/* シェーダーは vUv.x = 0.48 あたりから右を暗くしており、そこが会社概要を載せる帯になる。
+   グリッドの右端を画面の右端に合わせると、その暗部がちょうど画面右側に来る。
+   PC では計算結果が正になるので 0 で頭打ちにし、位置を動かさない。 */
+/* 縦長画面での微調整。右端合わせだけだと左に寄りすぎ・高く見えるため少しだけ戻す。
+   PC は HEX_FIT が 1 なので、どちらの補正も 0 になり位置は変わらない。 */
+const HEX_NUDGE_X = HEX_FIT < 1 ? 0.4 : 0;
+const HEX_NUDGE_Y = HEX_FIT < 1 ? -0.5 : 0;
+const HEX_CX = Math.min(0, VIS_HALF_W - gridW * HEX_FIT / 2) + HEX_NUDGE_X;
+const HEX_CY = -8 + HEX_NUDGE_Y;   // グリッドの中心の高さ（既定は -8）
 const hexCount = HEX_COLS * HEX_ROWS;
 const hexMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false,
@@ -1456,7 +1505,8 @@ for (let row = 0; row < HEX_ROWS; row++) {
 hexGeo.setAttribute("aCenter", new THREE.InstancedBufferAttribute(hexCenter, 2));
 hexGeo.setAttribute("aUVoff", new THREE.InstancedBufferAttribute(hexUVoff, 2));
 hexMesh.instanceMatrix.needsUpdate = true;
-hexMesh.position.set(0, -8, 0);
+hexMesh.position.set(HEX_CX, HEX_CY, 0);
+hexMesh.scale.setScalar(HEX_FIT);
 hexMesh.frustumCulled = false;
 hexMesh.visible = false;
 sea.add(hexMesh);
@@ -1476,8 +1526,8 @@ function makeSeqVideoTex(src) {
   return { v, tex };
 }
 const companyClips = [
-  makeSeqVideoTex("assets/videos/company-1.mp4"),
-  makeSeqVideoTex("assets/videos/company-2.mp4"),
+  makeSeqVideoTex("assets/videos/company-1-opt.mp4"),
+  makeSeqVideoTex("assets/videos/company-2-opt.mp4"),
 ];
 let companyIdx = 0;
 function playCompanyClip(i) {
@@ -1506,8 +1556,8 @@ const _hexHit = new THREE.Vector3();
 // so the hex grid looks like it forms out of them.
 const fnDisc = new Float32Array(FINALE_COUNT * 3);
 for (let i = 0; i < FINALE_COUNT; i++) {
-  fnDisc[i*3+0] = (Math.random() - 0.5) * gridW;
-  fnDisc[i*3+1] = (Math.random() - 0.5) * gridH - 8.0; // grid is centred at y -8
+  fnDisc[i*3+0] = (Math.random() - 0.5) * gridW * HEX_FIT + HEX_CX;
+  fnDisc[i*3+1] = (Math.random() - 0.5) * gridH * HEX_FIT + HEX_CY; // grid is centred at HEX_CY
   fnDisc[i*3+2] = -0.3 + (Math.random() - 0.5) * 0.2;  // just behind the hex tiles
 }
 
@@ -1557,7 +1607,7 @@ function closeCardModal() {
 modalEl.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeCardModal));
 window.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalOpen) closeCardModal(); });
 window.addEventListener("click", (e) => {
-  if (modalOpen || (e.target.closest && e.target.closest(".cardmodal"))) return;
+  if (modalOpen || (e.target.closest && e.target.closest(".cardmodal, .nav"))) return;
   if (hoveredCard) openCardModal(hoveredCard.userData.project);
   else if (finaleCardHot) openCardModal(finaleProject);
 });
@@ -1571,9 +1621,34 @@ document.querySelectorAll(".chat__list a").forEach((a, i) => {
   });
 });
 
-// Returning from a sub-page (e.g. reskilling.html) lands back on its card in the spine section
-const RETURN_TO = new URLSearchParams(location.search).get("back");
-const RETURN_SCROLL = { reskilling: 3.30 }; // scroll pos where the リスキリング card is front
+// Returning from a sub-page (e.g. reskilling.html) lands back where it left off.
+// Keys match the ?back=... value each sub-page links with; values are positions on
+// the same 0..SCROLL_MAX timeline the top-right nav jumps to.
+let RETURN_TO = null;
+try {
+  RETURN_TO = sessionStorage.getItem("llm:back");
+  sessionStorage.removeItem("llm:back"); // 一度使ったら消す（次のリロードは先頭から）
+} catch (e) {}
+if (!RETURN_TO) RETURN_TO = new URLSearchParams(location.search).get("back"); // 旧リンク用
+const RETURN_SCROLL = {
+  top:        0,      // reskilling.html のロゴ
+  about:      1.55,
+  work:       2.25,
+  // 各事業カードが正面に来る位置（2.25 から 0.35 刻み。projects の並び順と対応）
+  "web-development": 2.25,
+  dx: 2.60,
+  "data-ml": 2.95,
+  reskilling: 3.30,   // リスキリングのカードが正面に来る位置
+  // GPUは周回カードではなくFinaleのヒーローカード。4.25 では粒子がカードを形作った
+  // 直後で本体がまだ半分ほどしか出ていないため、完全に現れて動画が回っている位置に置く。
+  // （出現 4.08→4.40 で完了、退場は 4.95 から始まる）
+  gpu: 4.65,
+  company:    7.25,
+  // contact / privacy-policy / tokusho のリンクは「← トップへ戻る」表記なので、
+  // 文脈上の近い位置ではなく表示どおり先頭に戻す（ラベルと挙動を一致させる）
+  contact:    0,
+  legal:      0,
+};
 let scroll = 0, targetScroll = 0;
 if (RETURN_TO) {
   if (RETURN_SCROLL[RETURN_TO] != null) scroll = targetScroll = RETURN_SCROLL[RETURN_TO]; // else start at top
@@ -1616,10 +1691,14 @@ window.addEventListener("click", (e) => {
 });
 
 const SCROLL_MAX = 7.4; // whole experience spans 0..SCROLL_MAX (multiple sections)
+const EASE_IDLE = 0.06; // normal wheel/touch feel
+const EASE_JUMP = 0.13; // while a nav jump is in flight (~0.6s end to end)
+let scrollEase = EASE_IDLE;
 window.addEventListener("wheel", (e) => {
   if (modalOpen || unlocking) return; // freeze the experience while a modal is open / unlocking
   targetScroll += e.deltaY * 0.00035; // slower: more scroll distance = more time to watch
   targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll));
+  scrollEase = EASE_IDLE; // manual input cancels a nav jump's boosted easing
 }, { passive: true });
 // touch scroll
 let touchY = null;
@@ -1627,8 +1706,44 @@ window.addEventListener("touchstart", (e)=>{ touchY = e.touches[0].clientY; }, {
 window.addEventListener("touchmove", (e)=>{
   if (modalOpen || unlocking) return;
   if (touchY !== null){ targetScroll += (touchY - e.touches[0].clientY) * 0.0010; touchY = e.touches[0].clientY;
-    targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll)); }
+    targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll)); scrollEase = EASE_IDLE; }
 }, {passive:true});
+
+/* ---- Top-right nav ------------------------------------------------------
+   Each link moves `targetScroll`, so the existing easing plays the jump and
+   the sections in between flow past fast-forward instead of cutting. `at` is
+   the landing spot; from/to is the range that lights the link up. The ranges
+   are contiguous so exactly one item is always active: Finale (the GPU hero
+   card) counts as Work since it is project content, and the underwater
+   wordmark reads as the run-up to Company. */
+const NAV_SECTIONS = [
+  { id: "top",     at: 0.00, from: 0.00, to: 1.00 },
+  { id: "about",   at: 1.55, from: 1.00, to: 1.88 },
+  { id: "work",    at: 2.25, from: 1.88, to: 5.50 },
+  { id: "company", at: 7.25, from: 5.50, to: SCROLL_MAX + 0.01 },
+];
+// Matched by attribute rather than by position, so the markup can be reordered
+// or duplicated without this block needing to know about it.
+const navLinks = [...document.querySelectorAll("a[data-scroll][data-sec]")];
+navLinks.forEach((a) => {
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // don't let the card raycaster see this click
+    if (modalOpen || unlocking) return;
+    targetScroll = Math.max(0, Math.min(SCROLL_MAX, parseFloat(a.dataset.scroll)));
+    scrollEase = EASE_JUMP;
+  });
+});
+let navActiveId = "";
+function updateNavActive() {
+  let id = "";
+  for (const s of NAV_SECTIONS) {
+    if (scroll >= s.from && scroll < s.to) { id = s.id; break; }
+  }
+  if (id === navActiveId) return; // only touch the DOM when it actually changes
+  navActiveId = id;
+  navLinks.forEach((a) => a.classList.toggle("is-active", a.dataset.sec === id));
+}
 
 /* =========================================================
    Post-processing : bloom
@@ -1682,7 +1797,9 @@ function animate() {
   const t = clock.elapsedTime;
 
   // smooth scroll + pointer
-  scroll += (targetScroll - scroll) * 0.06;
+  scroll += (targetScroll - scroll) * scrollEase;
+  if (scrollEase !== EASE_IDLE && Math.abs(targetScroll - scroll) < 0.01) scrollEase = EASE_IDLE;
+  updateNavActive();
   pointer.x += (pointer.tx - pointer.x) * 0.05;
   pointer.y += (pointer.ty - pointer.y) * 0.05;
 
@@ -1762,7 +1879,7 @@ function animate() {
   aboutTextMesh.visible = false;
   aboutEl.style.setProperty("--rev", aboutT.toFixed(3));
   // split speeds: left (title) much slower, right (copy) unchanged
-  const copyShift = smoothstep(1.15, 2.65, scroll); // a bit slower
+  const copyShift = smoothstep(1.15, isNarrow ? 3.2 : 2.65, scroll); // a bit slower (slower still when stacked)
   const titleShift = smoothstep(1.15, 3.5, scroll); // a touch slower
   aboutCopyEl.style.transform = `translateY(${(30 - copyShift * 150).toFixed(1)}vh)`;
   aboutTitleEl.style.transform = `translateY(${(30 - titleShift * 150).toFixed(1)}vh)`;
@@ -1771,7 +1888,7 @@ function animate() {
   // --- Section 4 (Work): spine + cards scroll in and orbit ---
   work.visible = scroll > 1.88 && scroll < 3.65;
   if (work.visible) {
-    const WORK_SCALE = 1.25;
+    const WORK_SCALE = 1.25 * fitScale();
     // As the Finale arrives, the spine + cards shrink and keep spinning away
     const exitF = smoothstep(3.30, 3.62, scroll); // last card arrives front -> immediately spins away (no pause)
     work.scale.setScalar(WORK_SCALE * (1 - exitF));
@@ -1868,7 +1985,7 @@ function animate() {
     // follow the spine + cards: rotate with the staircase and lift upward (incl. the wipe entrance)
     const entranceT2 = smoothstep(1.88, 2.25, scroll);
     const wprog = Math.max(0, Math.min(1, (scroll - 2.25) / 1.05));
-    const workLift = wprog * (cards.length - 1) * CARD_STEP * 1.25 - (1 - entranceT2) * 2.5;
+    const workLift = wprog * (cards.length - 1) * CARD_STEP * 1.25 * fitScale() - (1 - entranceT2) * 2.5;
     const spin = -wprog * (cards.length - 1) * CARD_ANGLE + (1 - entranceT2) * 1.4;
     const cs = Math.cos(spin), sn = Math.sin(spin);
     for (let i = 0; i < FINALE_COUNT; i++) {
@@ -1932,12 +2049,12 @@ function animate() {
       }
     }
     // hover: gently enlarge the card (same feel as the Work cards)
-    const tScl = finaleCardHot ? 1.07 : 1.0;
+    const tScl = (finaleCardHot ? 1.07 : 1.0) * fitScale();
     const sc = finaleCard.scale.x + (tScl - finaleCard.scale.x) * 0.15;
     finaleCard.scale.setScalar(sc);
   } else {
     finaleCardHot = false;
-    finaleCard.scale.setScalar(1.0); // reset so it re-enters at normal size
+    finaleCard.scale.setScalar(fitScale()); // reset so it re-enters at normal size
   }
 
   // --- Section 6 (Underwater): sea environment + teal fog ---
@@ -1970,7 +2087,7 @@ function animate() {
     let inGrid = 0;
     if (hit) {
       hexMat.uniforms.uCursor.value.set(hit.x, hit.y + 8, 0); // grid is at y -8
-      inGrid = (Math.abs(hit.x) < gridW / 2 + 1 && Math.abs(hit.y + 8) < gridH / 2 + 1) ? 1 : 0;
+      inGrid = (Math.abs(hit.x - HEX_CX) < gridW * HEX_FIT / 2 + 1 && Math.abs(hit.y - HEX_CY) < gridH * HEX_FIT / 2 + 1) ? 1 : 0;
     }
     hexMat.uniforms.uHover.value += (inGrid - hexMat.uniforms.uHover.value) * 0.12;
     // (no pointer cursor over the hex grid — keep the default arrow; ripple stays)
@@ -2145,11 +2262,25 @@ function animate() {
 }
 animate();
 
-// Browser Back from login restores this page from the back-forward cache, which
-// would otherwise show the frozen white/warped ascension frame. Reset the
-// transition state and land back on the "Lumina Logic Minds" wordmark section.
+// Browser Back restores this page from the back-forward cache: the JS state is
+// thawed rather than re-run, so whatever was on screen when we left comes back.
 window.addEventListener("pageshow", (ev) => {
   if (!ev.persisted) return;
+
+  // The service pages are opened from inside the card modal, so coming back
+  // would otherwise restore the page with that modal still covering the scene.
+  if (modalOpen) closeCardModal();
+  hoveredCard = null;
+  document.body.style.cursor = "";
+
+  // Everything below is only for returning from login.html via the hidden
+  // ascension: the page was frozen mid-whiteout and would thaw on that frame.
+  // Guarding on `unlocking` matters — without it every Back, including one from
+  // a service page, was yanked to the underwater wordmark at 5.95. Leaving
+  // `scroll` alone lands the visitor exactly where they were, which is the card
+  // they opened.
+  if (!unlocking) return;
+
   unlocking = false; unlockStage = 0; unlockCount = 0;
   whiteoutEl.style.opacity = 0;
   camera.fov = 42; camera.updateProjectionMatrix();

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GPUインフラ・コンピューティング事業｜Lumina Logic Minds</title>
+  <meta name="description" content="仮想化基盤へのGPUパススルー、ドライバ環境の構築、コンテナでの提供まで。機材を用意するだけでは動かないGPU環境を、実際に計算が回る状態にしてお渡しします。" />
+  <meta name="theme-color" content="#05070c" />
+
+  <link rel="icon" type="image/png" href="assets/models/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/service.css" />
+  <script src="js/back-link.js" defer></script>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true">
+    <div class="aurora__b aurora__b1"></div>
+    <div class="aurora__b aurora__b2"></div>
+    <div class="aurora__b aurora__b3"></div>
+    <div class="aurora__b aurora__b4"></div>
+  </div>
+
+  <div class="progress" id="progress"></div>
+  <nav class="dots" id="dots" aria-label="セクションナビ"></nav>
+
+  <nav class="topnav">
+    <a class="topnav__brand" href="index.html" data-back="top"><img class="topnav__logo" src="assets/models/logo-white.png" alt="Lumina Logic Minds" /></a>
+    <a class="topnav__back" href="index.html" data-back="gpu">← 戻る</a>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="top" data-nav="Top">
+    <div class="wrap">
+      <p class="hero__eyebrow">GPU INFRASTRUCTURE &amp; COMPUTING</p>
+      <h1 class="hero__brand">Compute,<br />Ready to Run</h1>
+      <p class="hero__jp">計算資源を、使える状態で。</p>
+      <p class="hero__sub">
+        GPUは、用意しただけでは動きません。<br />
+        仮想化・ドライバ・権限がすべて噛み合って、はじめて計算が走ります。<br />
+        その最後の一段までをお引き受けします。
+      </p>
+      <p class="hero__scroll">SCROLL ↓</p>
+    </div>
+  </header>
+
+  <!-- 01 INSIGHT -->
+  <section id="insight" data-nav="Insight">
+    <div class="wrap reveal">
+      <p class="eyebrow">01 — Insight</p>
+      <p class="statement">
+        GPUは<span class="em">確保できた。</span><br />
+        それでも、計算が始まらない。
+      </p>
+      <p class="lead" style="margin-top:30px;">
+        生成AIの普及で、高性能GPUの需要は急速に膨らみました。
+        一方で、機材を手に入れたのに計算が回り始めない、という事態は珍しくありません。
+        仮想化基盤からデバイスが見えない。ドライバが噛み合わない。権限が足りずにアプリケーションから認識されない。
+        ハードウェアを調達することと、計算が走る環境が立ち上がることの間には、いくつもの段差があります。
+      </p>
+    </div>
+  </section>
+
+  <!-- 02 OUR ANSWER -->
+  <section id="answer" data-nav="Answer">
+    <div class="wrap reveal">
+      <p class="eyebrow">02 — Our Answer</p>
+      <h2 class="section-title">難しいのは調達ではなく、<span class="em">成立させること</span></h2>
+      <p class="lead">
+        私たちはGPU環境を自社で保有し、日々の開発と検証に使っています。
+        そのうえで、仮想化基盤へのパススルー、異なるベンダーのドライバ共存、コンテナでの環境提供といった、
+        実際に動かすための工程を手がけてきました。
+        カタログ上のスペックではなく、目の前で計算が回るところまでを仕事の範囲だと考えています。
+      </p>
+    </div>
+  </section>
+
+  <!-- 03 PRINCIPLES -->
+  <section id="principles" data-nav="Principles">
+    <div class="wrap reveal">
+      <p class="eyebrow">03 — Checklist</p>
+      <h2 class="section-title">引き渡す前に<span class="em">確かめること</span></h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card__num">01</div>
+          <div class="card__title">「動いた」で終わらせない</div>
+          <p class="card__body">一度動くことと、いつでも動くことは別です。ホストを再起動しても、VMを立て直しても同じ状態になるか。そこまで確かめて初めて、引き渡せる環境になったと考えます。再現性の検証を工程に組み込んでいます。</p>
+        </div>
+        <div class="card">
+          <div class="card__num">02</div>
+          <div class="card__title">失敗した手順も記録する</div>
+          <p class="card__body">うまくいった手順だけを並べた資料は、途中で詰まったときに役に立ちません。何を試して、どう失敗し、なぜその方法に至ったのか。過程を残すことが、後から再現できる条件だと考えています。</p>
+        </div>
+        <div class="card">
+          <div class="card__num">03</div>
+          <div class="card__title">使える状態にして渡す</div>
+          <p class="card__body">機材を用意して終わりにはしません。ドライバ、ランタイム、権限設定まで整え、実際にアプリケーションからGPUが見えることを確認したうえでお渡しします。環境構築の手間ごと引き受けるという立場です。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 PROCESS -->
+  <section id="process" data-nav="Process">
+    <div class="wrap reveal">
+      <p class="eyebrow">04 — Process</p>
+      <h2 class="section-title">計算が<span class="em">回り始める</span>まで</h2>
+      <p class="lead">
+        構成によって、成立する組み合わせと、どうしても成立しない組み合わせがあります。
+        だからこそ、着手前に「何をもって完了とするか」を明確にしてから進めます。
+      </p>
+
+      <div class="specs">
+        <div class="specs__row">
+          <div class="specs__k">01 要件の確認</div>
+          <div class="specs__v">何を動かしたいのかを伺います。使用するフレームワーク、必要なメモリ量、想定する同時利用者数。
+            <small>「完了の条件」をこの段階で文章として確定させます</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">02 構成の検討</div>
+          <div class="specs__v">物理構成のまま使うか、仮想化基盤上に載せるか。GPUをどう割り当てるかを設計します。</div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">03 検証</div>
+          <div class="specs__v">その構成で本当に成立するかを、実機で確かめます。
+            <small>ハードウェアの制約により成立しない場合もあるため、実装の前に切り分けます</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">04 構築</div>
+          <div class="specs__v">ドライバ、ランタイム、権限設定までを整え、アプリケーションからGPUが認識される状態にします。</div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">05 再現性の確認</div>
+          <div class="specs__v">ホスト再起動後、VM再起動後、ゼロから構築し直した場合。それぞれで同じ状態になることを確認します。
+            <small>ここを省くと、次に落ちたとき誰も直せません</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">06 手順書の提供</div>
+          <div class="specs__v">構築手順を文書としてお渡しします。担当者が変わっても再現できる状態を目指します。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 WORKS -->
+  <section id="works" data-nav="Works">
+    <div class="wrap reveal">
+      <p class="eyebrow">05 — Works</p>
+      <h2 class="section-title">これまで<span class="em">手がけてきた構築</span></h2>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="card__tag">公開記事あり</span>
+          <div class="card__title">異ベンダーGPUの同時パススルー</div>
+          <p class="card__body">仮想化基盤 Proxmox VE 上の Ubuntu 仮想マシンへ、NVIDIA GeForce と、Thunderbolt 4 経由で接続した AMD Radeon の2枚を同時にパススルーし、双方を Vulkan デバイスとして認識させる案件です。原因の切り分けから構築、再起動後の再現性確認までを担当しました。成果は構築手順の記事として公開され、当社名義で掲載されています。</p>
+        </div>
+        <div class="card">
+          <span class="card__tag">基盤運用</span>
+          <div class="card__title">GPU利用基盤の構築・改善</div>
+          <p class="card__body">利用者がブラウザから予約して時間単位でGPUマシンを使い、そのままブラウザ上のターミナルで作業できる ―― そうした仕組みの構築・改善に携わっています。コンテナによる環境の払い出し、予約から延長・終了までの制御など、GPUを「貸せる状態」にするための実装領域です。</p>
+        </div>
+        <div class="card">
+          <span class="card__tag">自社環境</span>
+          <div class="card__title">開発・検証用GPU環境の保有</div>
+          <p class="card__body">当社では開発と検証のためのGPU環境を保有し、日常的に稼働させています。自分たちが使っていない環境を提案することはありません。実際に動かしているからこそ、詰まる箇所も、その回避方法も具体的にお伝えできます。</p>
+        </div>
+        <div class="card">
+          <span class="card__tag">技術の中身</span>
+          <div class="card__title">扱っている領域の深さ</div>
+          <p class="card__body">IOMMU グループの構成把握、PCI デバイスの機能単位での割り当て、NVIDIA プロプライエタリドライバと Mesa RADV という異なるドライバスタックの共存、デバイスファイルへの権限付与。一般的な手順書には載っていない層で発生する問題を、切り分けて解決しています。</p>
+        </div>
+      </div>
+
+      <!-- 先方がクレジットとサイトURLの併記に同意のうえ公開された記事。
+           6ヶ月の公開継続が条件のため、リンク切れになっていないか時々確認すること。 -->
+      <div style="margin-top:38px;">
+        <a class="btn btn--ghost" href="https://qiita.com/hiro-matsumoto/items/5b88d9316b166cbbbacc" target="_blank" rel="noopener noreferrer">構築手順の記事を読む（Qiita）</a>
+      </div>
+      <p class="note">※ 当社が著者として執筆し、クライアント企業様の企画・監修のもと公開された技術記事です。</p>
+    </div>
+  </section>
+
+  <!-- 06 CAPABILITY -->
+  <section id="capability" data-nav="Capability">
+    <div class="wrap reveal">
+      <p class="eyebrow">06 — Capability</p>
+      <h2 class="section-title">お引き受けできる<span class="em">領域</span></h2>
+      <p class="lead">
+        機材の相談から、環境の構築、その後の運用まで。
+        どの段階からでもご相談いただけます。
+      </p>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card__title">GPUパススルー・仮想化</div>
+          <p class="card__body">仮想化基盤上の仮想マシンへGPUを割り当てます。複数枚、異なるベンダーの組み合わせにも対応します。</p>
+        </div>
+        <div class="card">
+          <div class="card__title">ドライバ・実行環境の構築</div>
+          <p class="card__body">GPUドライバ、CUDA や Vulkan などのランタイム、権限設定まで整え、動作を確認してお渡しします。</p>
+        </div>
+        <div class="card">
+          <div class="card__title">コンテナでの環境提供</div>
+          <p class="card__body">利用者ごとに独立した環境をコンテナで払い出す構成に対応します。</p>
+        </div>
+        <div class="card">
+          <div class="card__title">利用基盤の開発</div>
+          <p class="card__body">予約、時間管理、ブラウザからの接続といった、GPUを利用者に届けるための仕組みそのものを開発します。</p>
+        </div>
+      </div>
+
+      <div class="specs">
+        <div class="specs__row">
+          <div class="specs__k">仮想化基盤</div>
+          <div class="specs__v">Proxmox VE ／ KVM
+            <small>IOMMU・VFIO を用いたデバイスの割り当てに対応します</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">GPU・ドライバ</div>
+          <div class="specs__v">NVIDIA（プロプライエタリドライバ） ／ AMD（amdgpu・Mesa RADV） ／ Intel 内蔵GPU
+            <small>異なるベンダーのドライバを同一環境で共存させる構成にも対応します</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">グラフィックス・計算API</div>
+          <div class="specs__v">Vulkan ／ CUDA</div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">OS・コンテナ</div>
+          <div class="specs__v">Ubuntu Server ／ Linux 全般 ／ Docker</div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">クラウド併用</div>
+          <div class="specs__v">AWS ／ Google Cloud
+            <small>自社環境とクラウドを組み合わせた構成もご相談ください</small></div>
+        </div>
+        <div class="specs__row">
+          <div class="specs__k">納品物</div>
+          <div class="specs__v">構築手順書 ／ 運用手順書
+            <small>担当者が変わっても再現できる形でお渡しします</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final" id="contact" data-nav="Contact">
+    <div class="wrap reveal">
+      <h2 class="final__h">Make the compute run.</h2>
+      <p class="final__p">
+        「この構成で動くのか分からない」という段階で構いません。<br />
+        成立するかどうかの見極めから、ご一緒します。
+      </p>
+      <a class="btn" href="contact.html">お問い合わせはこちら <span>→</span></a>
+    </div>
+  </section>
+
+  <footer>
+    <p class="small">© Lumina Logic Minds — GPUインフラ・コンピューティング事業</p>
+  </footer>
+
+  <script src="js/service-page.js"></script>
+</body>
+</html>

@@ -99,13 +99,23 @@ html, body {
   box-shadow: 0 0 24px rgba(0,0,0,0.4), inset 0 0 12px rgba(120,160,160,0.06);
 }
 .nav__link {
+  position: relative;
   font-family: var(--disp); font-weight: 500;
   font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
-  color: rgba(255,255,255,0.82); text-decoration: none;
+  color: rgba(255,255,255,0.62); text-decoration: none;
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 .nav__link:hover { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); }
-.nav__wave { color: rgba(160,200,200,0.5); display: flex; align-items: center; }
+/* current section — the underline sweeps in from the left */
+.nav__link.is-active { color: #fff; text-shadow: 0 0 12px rgba(120,255,230,0.45); }
+.nav__link::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(120,255,230,0.95), transparent);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav__link.is-active::after { transform: scaleX(1); }
+
 
 /* ===== Bottom-left URL stamp ===== */
 
@@ -325,7 +335,14 @@ html, body {
   box-shadow: 0 0 32px rgba(245, 210, 120, 0.6);
 }
 @media (max-width: 768px) {
-  .seatext { left: 6vw; right: 6vw; bottom: 10vh; max-width: none; }
+  /* 会社概要と縦に並べるため、こちらはセクション上部へ寄せて小さくまとめる。
+     下に置いたままだと会社概要と重なり、どちらも読めなくなる。 */
+  .seatext {
+    left: 6vw; right: 6vw; top: 13vh; bottom: auto; max-width: none;
+  }
+  .seatext__title { font-size: 26px; margin-bottom: 12px; }
+  .seatext__copy { font-size: 12.5px; line-height: 1.7; margin-bottom: 18px; }
+  .seatext__link { font-size: 13px; padding: 11px 24px; }
 }
 
 /* ===== Work: chat-style navigator (bottom-left) ===== */
@@ -359,13 +376,24 @@ html, body {
 }
 
 @media (max-width: 768px) {
-  .nav { padding: 20px; }
-  .nav__pill { gap: 12px; padding: 9px 18px; }
-  .nav__link { font-size: 11px; letter-spacing: 0.16em; }
+  /* 右端3分の2ほどしか占めておらず指が届きにくいので、画面幅いっぱいに広げ、
+     5項目を等間隔に配置する。文字も一回り大きくしてタップ精度を上げる。 */
+  .nav { left: 0; right: 0; padding: 16px 10px; align-items: stretch; }
+  .nav__pill { justify-content: space-between; gap: 2px; padding: 12px 14px; }
+  .nav__link { font-size: 12.5px; letter-spacing: 0.06em; padding: 4px 2px; }
+  .nav__link::after { bottom: 0; }
   .about__title { left: 6vw; bottom: auto; top: 12vh; font-size: clamp(34px, 13vw, 70px); }
   .about__copy { right: 6vw; left: 6vw; bottom: 8vh; max-width: none; }
-  .chat { bottom: 4vh; }
-  .chat__list { gap: 9px; }
+  /* 背骨セクションの左下ナビ。狭い画面では3Dのカードと重なって読めないため隠す。
+     同じ内容へはカード自体をタップすれば辿り着けるので、導線は失われない。 */
+  .chat { display: none; }
+}
+
+/* 5 nav items are tight on a narrow phone — tighten further */
+@media (max-width: 430px) {
+  .nav { padding: 14px 8px; }
+  .nav__pill { padding: 11px 10px; }
+  .nav__link { font-size: 11.5px; letter-spacing: 0.02em; }
 }
 
 /* ===== Company profile overlay (over the underwater hex screen) ===== */
@@ -396,6 +424,8 @@ html, body {
   font-size: clamp(30px, 4vw, 48px); letter-spacing: 0.06em;
 }
 .company__list { margin: 0; display: flex; flex-direction: column; gap: 22px; }
+/* 狭い画面でのみ有効になる改行（住所を1行増やす）。既定は無効 */
+.br-sp { display: none; }
 .company__row {
   display: grid; grid-template-columns: 96px 1fr; gap: 20px; align-items: baseline;
 }
@@ -438,12 +468,28 @@ body.company-split .company .company__inner {
 }
 
 @media (max-width: 768px) {
-  .company__row { grid-template-columns: 76px 1fr; gap: 12px; }
+  /* PC 同様、グリッド右側の暗い帯の上に載せる。JS 側でグリッドを左へ寄せて
+     その帯を画面右半分に確保しているので、テキストもそちらへ寄せる。
+     2列組みだと幅が足りないので、ラベルは本文の上に積む。 */
+  .company__inner { transform: translateY(12.5vh); }
+  .company__row { grid-template-columns: 1fr; gap: 2px; }
+  .company__row dt { font-size: 11.5px; color: rgba(190, 230, 255, 0.75); }
+  .company__row dd { font-size: 12.5px; line-height: 1.45; }
+  .company__list { gap: 9px; }
+  .company__title { font-size: 22px; margin-bottom: 11px; }
+  .company__eyebrow { font-size: 12px; margin-bottom: 6px; }
+  .br-sp { display: inline; }
+
   body.company-center .company .company__inner,
-  body.company-panel .company .company__inner,
-  body.company-split .company .company__inner {
+  body.company-panel .company .company__inner {
     margin: 0 6vw; max-width: none;
   }
-  body.company-panel .company,
-  body.company-split .company { justify-content: center; }
+  body.company-panel .company { justify-content: center; }
+
+  body.company-split .company { justify-content: flex-end; }
+  body.company-split .company .company__inner {
+    /* 右余白を広げて左へ寄せる。暗くなり始めるのはグリッド幅の 48% の位置＝
+       画面の左から約 35% なので、左端が 37% 程度までなら帯の中に収まる。 */
+    margin: 0 12vw 0 0; max-width: 50vw; text-align: left;
+  }
 }

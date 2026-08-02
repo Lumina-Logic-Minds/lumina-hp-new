@@ -40,7 +40,7 @@ scene.add(planets);
 const loader = new GLTFLoader();
 if (loader.setMeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);
 loader.load(
-  "assets/models/planets.glb",
+  "assets/models/planets-opt.glb",
   (gltf) => {
     const m = gltf.scene;
     const meshes = [];
@@ -76,10 +76,10 @@ loader.load(
       if (r > bgR) { bgR = r; bg = o; }
     });
     if (bg) bg.scale.multiplyScalar(2.5);
-    console.log("planets.glb loaded for the login space");
+    console.log("planets-opt.glb loaded for the login space");
   },
   undefined,
-  () => console.warn("planets.glb not found")
+  () => console.warn("planets-opt.glb not found")
 );
 
 /* subtle mouse parallax */

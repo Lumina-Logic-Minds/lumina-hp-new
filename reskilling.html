@@ -285,6 +285,7 @@
       .specs__row { grid-template-columns: 1fr; gap: 6px; }
     }
   </style>
+  <script src="js/back-link.js" defer></script>
 </head>
 <body>
   <div class="aurora" aria-hidden="true">
@@ -298,8 +299,8 @@
   <nav class="dots" id="dots" aria-label="セクションナビ"></nav>
 
   <nav class="topnav">
-    <a class="topnav__brand" href="index.html?back=top"><img class="topnav__logo" src="assets/models/logo-white.png" alt="Lumina Logic Minds" /></a>
-    <a class="topnav__back" href="index.html?back=reskilling">← 戻る</a>
+    <a class="topnav__brand" href="index.html" data-back="top"><img class="topnav__logo" src="assets/models/logo-white.png" alt="Lumina Logic Minds" /></a>
+    <a class="topnav__back" href="index.html" data-back="reskilling">← 戻る</a>
   </nav>
 
   <!-- HERO -->
@@ -473,7 +474,7 @@
         まずは現状の課題やご要望をお聞かせください。<br />
         助成金活用の可否も含め、最適なプランをご提案いたします。
       </p>
-      <a class="btn" href="#contact">無料で相談する <span>→</span></a>
+      <a class="btn" href="contact.html">お問い合わせはこちら <span>→</span></a>
     </div>
   </section>
 

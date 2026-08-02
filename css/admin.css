@@ -223,6 +223,32 @@ body {
 }
 .auth-btn:hover { background: #ffdd8a; transform: translateY(-2px); box-shadow: 0 0 30px rgba(241, 201, 107, 0.55); }
 .auth-btn:active { transform: translateY(0); }
+.auth-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+/* ---- 施錠状態 (.is-locked) ----
+   入力欄と LOG IN を伏せ、代わりに施錠バーを出す。ラベル "Password" は隠さない
+   （隠しコマンド WITNESS の W がページ内でそこにしか無いため）。解錠は login.html 側。 */
+.auth-lock {
+  display: none;
+  padding: 14px 16px; text-align: center;
+  border: 1px dashed rgba(240, 246, 255, 0.22); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.22em;
+  color: rgba(240, 246, 255, 0.38);
+  user-select: none;
+}
+.is-locked .auth-lock { display: block; }
+.is-locked #password,
+.is-locked .auth-btn { display: none; }
+
+/* 解錠時: 入力欄と LOG IN がふわりと現れる */
+.auth-card:not(.is-locked) #password,
+.auth-card:not(.is-locked) .auth-btn { animation: authreveal 0.6s ease both; }
+.auth-card:not(.is-locked) .auth-btn { animation-delay: 0.12s; }
+@keyframes authreveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
 .auth-error {
   margin-top: 16px; text-align: center;
   font-family: var(--mono); font-size: 13px; color: #ff8080;

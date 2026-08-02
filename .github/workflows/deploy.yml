@@ -1,0 +1,105 @@
+# 本番（お名前.com レンタルサーバー）への自動デプロイ
+#
+# ■ 現在は「手動実行のみ」です。
+#   まだ本番公開しない段階のため、push しても勝手に反映されないようにしてあります。
+#   公開の準備が整ったら、下の `push:` の3行のコメントを外してください。
+#   それ以降は main への push で自動的に本番へ反映されます。
+#
+# ■ 事前に GitHub 側で以下の Secrets を登録しておく必要があります。
+#   （リポジトリの Settings → Secrets and variables → Actions → New repository secret）
+#   Public リポジトリでも Secrets の中身は他人から見えません。
+#
+#     FTP_SERVER    : FTPサーバー名（お名前.comのコントロールパネルに記載）
+#     FTP_USERNAME  : FTPアカウント名
+#     FTP_PASSWORD  : FTPパスワード
+#
+#   サーバー上の公開ディレクトリは下の `server-dir` で指定しています。
+
+name: Deploy to production
+
+on:
+  workflow_dispatch:        # 手動実行（Actions タブ → Deploy to production → Run workflow）
+  # push:                   # ← 公開後、この3行のコメントを外すと自動デプロイになります
+  #   branches:
+  #     - main
+
+concurrency:
+  group: production-deploy  # 同時に走らせない（転送中に別の転送が始まるのを防ぐ）
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      # --- 事故防止の検査 ----------------------------------------------------
+      # js/config.js がテスト用のデプロイを向いたまま本番へ出ると、
+      # 問い合わせフォームも管理画面も検証環境に繋がってしまう。
+      # 自動化すると気づけないので、ここで止める。
+      - name: Apps Script の向き先が本番か検査
+        run: |
+          if ! grep -q '^window\.LLM_API_URL = API_PRODUCTION;' js/config.js; then
+            echo "::error file=js/config.js::本番向けになっていません。最終行を 'window.LLM_API_URL = API_PRODUCTION;' にしてください。"
+            echo "--- 現在の設定 ---"
+            grep -n 'window\.LLM_API_URL' js/config.js
+            exit 1
+          fi
+          echo "OK: 本番の Apps Script を向いています"
+
+      # 参照が壊れていないかの簡易チェック（配信されないファイルを指していないか）
+      - name: 参照ファイルの存在を確認
+        run: |
+          missing=0
+          for f in $(grep -ho 'href="[^"#:]*"\|src="[^"#:]*"' *.html \
+                     | sed 's/.*="//;s/"//' | sort -u); do
+            case "$f" in http*|//*|mailto:*|"") continue ;; esac
+            if [ ! -e "$f" ]; then echo "::error::参照先が存在しません: $f"; missing=1; fi
+          done
+          [ "$missing" = "0" ] && echo "OK: すべての参照先が存在します"
+          exit $missing
+
+      - name: JavaScript の構文チェック
+        run: |
+          for f in js/main.js js/login.js; do cp "$f" "/tmp/$(basename $f .js).mjs"; done
+          for f in /tmp/*.mjs; do node --check "$f" || exit 1; done
+          node --check js/back-link.js
+          node --check js/config.js
+          node --check js/service-page.js
+          echo "OK: 構文エラーなし"
+
+      # --- 転送 --------------------------------------------------------------
+      - name: FTP でアップロード
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps            # 暗号化なしの ftp は避ける。繋がらない場合は ftps-legacy を試す
+          local-dir: ./
+          server-dir: public_html/luminalogicminds.jp/
+          dangerous-clean-slate: false   # サーバー側の error/ などを消さないため false のまま
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.DS_Store
+            **/node_modules/**
+            serve.py
+            tools/**
+            gas/**
+            DEPLOY.md
+            README.md
+            .enc-test/**
+            assets/models/brain-top.glb
+            assets/models/planets.glb
+            assets/models/rocket.glb
+            assets/models/space.glb
+            assets/models/spine.glb
+            assets/videos/card1.mp4
+            assets/videos/card2.mp4
+            assets/videos/card3.mp4
+            assets/videos/card4.mp4
+            assets/videos/card5.mp4
+            assets/videos/company-1.mp4
+            assets/videos/company-2.mp4

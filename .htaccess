@@ -1,0 +1,35 @@
+# ===== Lumina Logic Minds — Apache (お名前.com レンタルサーバー / cPanel) =====
+
+# ---- MIME タイプ ----
+# .glb は Apache の標準定義に無い。未定義でも大抵は動くが、明示しておくほうが安全。
+AddType model/gltf-binary .glb
+AddType model/gltf+json  .gltf
+AddType video/mp4        .mp4
+
+# ---- キャッシュ制御 ----
+# Cache-Control を返さないと、ブラウザは「Last-Modified からの経過時間の10%」の間、
+# サーバーに問い合わせずキャッシュを使う（ヒューリスティックキャッシュ）。
+# サイトを更新しても再訪問者に古い画面が出続ける原因になるので、明示的に指定する。
+<IfModule mod_headers.c>
+  # HTML / CSS / JS — 毎回サーバーに確認させる。変更が無ければ 304 が返るだけなので軽い。
+  <FilesMatch "\.(html|css|js)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # モデル・動画・画像 — 巨大で滅多に変わらないので1年キャッシュさせて表示を速くする。
+  # 【注意】差し替えるときは必ずファイル名を変えること（例: planets.glb -> planets-v2.glb）。
+  # 同名で上書きすると、再訪問者には最長1年間ずっと古いファイルが表示される。
+  <FilesMatch "\.(glb|gltf|mp4|png|jpg|jpeg|webp|svg|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# ---- 圧縮 ----
+# .glb / .mp4 は圧縮済みなので対象外（かえって CPU を食う）。テキスト系のみ。
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain \
+                                application/javascript application/json image/svg+xml
+</IfModule>
+
+# ---- ディレクトリ一覧の抑止 ----
+Options -Indexes

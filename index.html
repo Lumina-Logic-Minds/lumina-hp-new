@@ -33,7 +33,12 @@
       try {
         var nav = performance.getEntriesByType("navigation")[0];
         var t = nav ? nav.type : "navigate";
-        var back = new URLSearchParams(location.search).get("back");
+        // 戻り先は sessionStorage 経由（?back= だとトップページの URL が2種類になり、
+        // 片方のキャッシュだけ取り残されて古い HTML が配信される）。?back= は
+        // 旧リンクが残っている場合のフォールバック。
+        var back = null;
+        try { back = sessionStorage.getItem("llm:back"); } catch (e) {}
+        if (!back) back = new URLSearchParams(location.search).get("back");
         if (t === "reload" || t === "back_forward" || back) {
           document.documentElement.classList.add("skip-intro");
         }
@@ -61,15 +66,18 @@
     <!-- Bottom-to-top sweep line (Work -> Finale transition) -->
     <div class="vline" id="vline"></div>
 
-    <!-- Top-right pill navigation -->
+    <!-- Top-right pill navigation.
+         data-scroll = the position on the 0..SCROLL_MAX timeline each link jumps to
+         (see NAV_SECTIONS in js/main.js). The wave marks the boundary between
+         in-page section jumps and the real page navigation (Contact). -->
     <header class="nav" id="nav">
-      <div class="nav__pill">
-        <a href="#work" class="nav__link">Work</a>
-        <span class="nav__wave" aria-hidden="true">
-          <svg viewBox="0 0 60 16" width="60" height="16"><path d="M2 8 C 14 1, 20 15, 30 8 S 46 1, 58 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </span>
+      <nav class="nav__pill" aria-label="メインナビゲーション">
+        <a href="#top" class="nav__link" data-scroll="0" data-sec="top">Top</a>
+        <a href="#about" class="nav__link" data-scroll="1.55" data-sec="about">About</a>
+        <a href="#work" class="nav__link" data-scroll="2.25" data-sec="work">Work</a>
+        <a href="#company" class="nav__link" data-scroll="7.25" data-sec="company">Company</a>
         <a href="contact.html" class="nav__link">Contact</a>
-      </div>
+      </nav>
     </header>
 
     <!-- ===== About section (revealed on scroll, behind the big 3D logo) ===== -->
@@ -112,7 +120,8 @@
           <div class="company__row"><dt>代表者</dt><dd>細木 駿</dd></div>
           <div class="company__row"><dt>設立</dt><dd>2025年6月6日</dd></div>
           <div class="company__row"><dt>資本金</dt><dd>1,000,000円</dd></div>
-          <div class="company__row"><dt>所在地</dt><dd>〒530-0041<br />大阪府大阪市北区天神橋5丁目7-18<br />天5ミヤコビル401</dd></div>
+          <!-- br-sp は狭い画面でだけ効く改行。テキスト帯が細くなるため住所を1行増やす -->
+          <div class="company__row"><dt>所在地</dt><dd>〒530-0041<br />大阪府大阪市北区<br class="br-sp" />天神橋5丁目7-18<br />天5ミヤコビル401</dd></div>
         </dl>
       </div>
     </section>

@@ -14,14 +14,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Shippori+Mincho:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="css/admin.css" />
+  <script src="js/back-link.js" defer></script>
+  <script src="js/config.js"></script>
 </head>
 <body>
   <div class="bg-fx" aria-hidden="true"></div>
 
   <header class="admin-top">
-    <a class="admin-logo" href="index.html?back=admin">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
+    <a class="admin-logo" href="index.html" data-back="admin">LUMINA<span>LOGIC&nbsp;MINDS</span></a>
     <nav class="admin-nav">
-      <a href="index.html?back=admin">サイトへ</a>
+      <a href="index.html" data-back="admin">サイトへ</a>
       <button id="logout">ログアウト</button>
     </nav>
   </header>
@@ -64,11 +66,30 @@
 
   <script>
     // ---- auth guard ----
-    if (sessionStorage.getItem("isLoggedIn") !== "true") {
-      window.location.replace("login.html");
-    }
+    // 実際の認可はサーバー(Apps Script)側でトークンを検証して行う。ここでの判定は
+    // 「トークンを持たない人をログイン画面へ案内する」ための入口チェックにすぎない。
+    const TOKEN = sessionStorage.getItem("adminToken");
+    if (!TOKEN) window.location.replace("login.html");
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgA91JAODl9yXLgDDG4yN80DAnPEPypAHuJ3JRScGZ8K9_KriDWIFqjF1qgK44DoQN/exec";
+    const SCRIPT_URL = window.LLM_API_URL; // 管理APIのエンドポイント（切り替えは js/config.js）
+
+    /** 管理系APIの共通呼び出し。トークンを必ず添える。
+     *  Content-Type を text/plain にするのはプリフライトを避けるため（Apps Script の制約）。 */
+    async function api(payload) {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(Object.assign({ token: TOKEN }, payload)),
+      });
+      const data = await res.json();
+      if (data && data.error === "unauthorized") {
+        sessionStorage.removeItem("adminToken");
+        alert("セッションの有効期限が切れました。再度ログインしてください。");
+        window.location.replace("login.html");
+        throw new Error("unauthorized");
+      }
+      return data;
+    }
     const ITEMS_PER_PAGE = 10;
 
     let all = [];
@@ -83,7 +104,7 @@
     const modalBody = document.getElementById("modal-body");
 
     document.getElementById("logout").addEventListener("click", () => {
-      sessionStorage.removeItem("isLoggedIn");
+      sessionStorage.removeItem("adminToken");
       window.location.href = "login.html";
     });
     document.getElementById("refresh").addEventListener("click", loadContacts);
@@ -100,8 +121,7 @@
       rowsEl.innerHTML = "";
       emptyEl.hidden = true;
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=getContacts`);
-        const data = await res.json();
+        const data = await api({ action: "getContacts" });
         if (data && data.success && Array.isArray(data.contacts)) {
           all = data.contacts.slice().reverse(); // newest first
         } else {
@@ -148,7 +168,7 @@
         detail.addEventListener("click", () => openDetail(c));
         const del = document.createElement("button");
         del.className = "action-btn delete"; del.textContent = "削除";
-        del.addEventListener("click", () => deleteContact(c.id));
+        del.addEventListener("click", () => deleteContact(c));
         ops.appendChild(detail); ops.appendChild(del);
         tr.appendChild(ops);
 
@@ -224,12 +244,13 @@
     }
     function closeModal() { modalEl.hidden = true; }
 
-    async function deleteContact(id) {
-      if (id === undefined || id === null) return;
+    // 行番号(id)だけでなくメールアドレスも送る。一覧を開いたあとに別の行が削除されて
+    // 行番号がずれていた場合、サーバー側で不一致を検出して誤削除を防ぐため。
+    async function deleteContact(c) {
+      if (!c || c.id === undefined || c.id === null) return;
       if (!confirm("このお問い合わせを削除してよろしいですか？")) return;
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=deleteContact&id=${encodeURIComponent(id)}`);
-        const data = await res.json();
+        const data = await api({ action: "deleteContact", id: c.id, email: c.email });
         if (data && data.success) {
           loadContacts();
         } else {
