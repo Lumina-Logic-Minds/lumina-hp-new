@@ -18,4 +18,4 @@ const API_TEST =
   "https://script.google.com/macros/s/AKfycbyb6o7tRfYkRnNctDYt3R0YXA75N7tvEr4IAFA44H4oyXVMW4C9-a1b0nF6iwhpwehF/exec";
 
 // ↓↓↓ 切り替えはこの行だけ ↓↓↓
-window.LLM_API_URL = API_TEST;
+window.LLM_API_URL = API_PRODUCTION;

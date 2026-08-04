@@ -116,7 +116,7 @@ Actions タブ → Deploy to production → Run workflow。
 ## 2. 公開後の確認
 
 - [ ] `https://luminalogicminds.jp/` が表示される
-- [ ] ナビ（Top / About / Work / Company / Contact）が5項目で表示され、クリックで移動する
+- [ ] ナビ（Top / Work / Company / Contact）が4項目で表示され、クリックで移動する
 - [ ] お問い合わせフォームを送信 → スプレッドシートに記録され、自動返信メールが届く
 - [ ] `contact.html` の「← トップへ戻る」でトップに戻り、**ナビが5項目のまま**であること
 - [ ] `login.html` で `— ACCESS LOCKED —` が表示される

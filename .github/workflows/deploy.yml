@@ -25,9 +25,9 @@ on:
         description: '接続テストのみ（ファイルは転送しない）'
         type: boolean
         default: true
-  # push:                   # ← 公開後、この3行のコメントを外すと自動デプロイになります
-  #   branches:
-  #     - main
+  push:                     # main への push で本番へ自動反映（2026-08-04 有効化）
+    branches:
+      - main
 
 concurrency:
   group: production-deploy  # 同時に走らせない（転送中に別の転送が始まるのを防ぐ）

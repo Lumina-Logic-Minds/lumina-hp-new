@@ -1717,8 +1717,10 @@ window.addEventListener("touchmove", (e)=>{
    card) counts as Work since it is project content, and the underwater
    wordmark reads as the run-up to Company. */
 const NAV_SECTIONS = [
-  { id: "top",     at: 0.00, from: 0.00, to: 1.00 },
-  { id: "about",   at: 1.55, from: 1.00, to: 1.88 },
+  // Top の着地点は 0 ではなく 1.55。0 はロゴだけで読ませる文章が無いため、
+  // About の文章が出ている位置を「トップ」として見せる。
+  // About の項目を外したぶん、点灯範囲は Top が 1.88 まで引き継ぐ。
+  { id: "top",     at: 1.55, from: 0.00, to: 1.88 },
   { id: "work",    at: 2.25, from: 1.88, to: 5.50 },
   { id: "company", at: 7.25, from: 5.50, to: SCROLL_MAX + 0.01 },
 ];
