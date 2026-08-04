@@ -16,13 +16,14 @@
 |---|---|
 | GitHub | https://github.com/Lumina-Logic-Minds/lumina-hp-new （**Public**） |
 | 確認用URL | https://lumina-logic-minds.github.io/lumina-hp-new/ |
-| 本番 | https://luminalogicminds.jp/ （**まだ旧HPのまま**） |
+| 本番 | https://luminalogicminds.jp/ （**新HP公開済み・2026-08-04**） |
 | サーバー | お名前.com レンタルサーバー（cPanel / Apache） |
 
-### 現在地（2026-08-02）
+### 現在地（2026-08-04）
 
-サイトは完成。PC・モバイルとも調整済み。GitHub へ反映済み。
-**本番はまだ差し替えていない。自動デプロイは意図的に無効化してある。**
+**新HPを本番公開済み。自動デプロイは有効。**
+`main` に push すると、3つの検査を通過したうえで FTP 転送され、数分で本番へ反映される。
+検査で止まった場合は転送されないため、壊れたものが公開されることはない。
 
 ---
 
@@ -170,14 +171,14 @@ script.google.com のプロジェクトに貼り付けて使う。**
 接続先の切り替えは `js/config.js` の最終行1箇所。
 
 ```js
-window.LLM_API_URL = API_TEST;   // ← 現在。公開時は API_PRODUCTION に変える
+window.LLM_API_URL = API_PRODUCTION;   // ← 現在。テストしたいときだけ API_TEST に戻す
 ```
 
 ---
 
 ## 7. デプロイ
 
-`.github/workflows/deploy.yml`。**現在は手動実行のみ**（`push:` をコメントアウト）。
+`.github/workflows/deploy.yml`。**`main` への push で自動反映される**（2026-08-04 有効化）。
 
 転送前に3つの検査が走り、1つでも失敗すれば転送されない。
 
@@ -191,18 +192,16 @@ FTPアカウント・Secrets・接続テストはすべて設定・検証済み�
 
 ## 8. 残作業
 
-### 公開当日（手順の詳細は `DEPLOY.md`）
+### 公開は完了済み（2026-08-04）
 
-1. Apps Script の本番デプロイを新バージョンに更新 ← **ユーザー操作が必要**
-2. `js/config.js` を `API_PRODUCTION` に変更
-3. `deploy.yml` の `push:` 3行のコメントを外す
-4. コミットしてプッシュ
+Apps Script は バージョン4 に更新済み。`config.js` は本番を向いている。
+`.htaccess` の動作も本番で確認済み（HTMLは毎回再検証、モデルは1年キャッシュ）。
 
-### 公開直後
+### 公開直後の後片付け（未完了なら実施する）
 
 - サーバー上の旧ファイルを削除（ルート直下の `style.css` `contact.css` `admin.css`
   `reskilling.css` と `image/`）。**`error/` は残す**
-- Apps Script のテスト用デプロイを削除
+- Apps Script の不要なデプロイを削除 —「テスト用」と**「無題」**の2つ
 
 ### 未着手の改善（急ぎではない）
 
