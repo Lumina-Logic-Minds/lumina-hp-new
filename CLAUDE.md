@@ -188,6 +188,40 @@ window.LLM_API_URL = API_PRODUCTION;   // ← 現在。テストしたいとき�
 
 FTPアカウント・Secrets・接続テストはすべて設定・検証済み（詳細は `DEPLOY.md`）。
 
+### ブランチ
+
+| | 役割 |
+|---|---|
+| `main` | 本番。push すると luminalogicminds.jp に反映される |
+| `dev` | **動作確認済みの状態を保存しておく退避先。** push しても本番は変わらない |
+
+`dev` は作業用ではない。普段の修正も `main` に直接 push する運用。
+`dev` は「本番で動くことを確認できた地点」の目印として置いてあり、
+**本番が壊れたときの戻り先**として使う。
+
+`dev` は放置すると古くなり、戻り先として役に立たなくなる。
+**本番へ反映し、サイトの動作を確認できたら `dev` を追従させること。**
+
+```
+git checkout dev && git merge main && git push origin dev && git checkout main
+```
+
+### 本番が壊れたときの復旧
+
+直前の変更が原因なら、これで戻る（履歴が残るので原因も追える）。
+
+```
+git revert HEAD --no-edit
+git push origin main
+```
+
+何度も push した後で切り分けがつかない場合は、確認済みの地点まで戻す。
+`--force` は履歴を書き換えるため、他に手が無いときだけ。
+
+```
+git checkout main && git reset --hard dev && git push --force origin main
+```
+
 ---
 
 ## 8. 残作業
