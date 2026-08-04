@@ -1421,7 +1421,7 @@ const gridW = HEX_COLS * hexW, gridH = HEX_ROWS * vSpace;
 /* 縦長画面での微調整。右端合わせだけだと左に寄りすぎ・高く見えるため少しだけ戻す。
    PC は HEX_FIT が 1 なので、どちらの補正も 0 になり位置は変わらない。 */
 const HEX_NUDGE_X = HEX_FIT < 1 ? 0.4 : 0;
-const HEX_NUDGE_Y = HEX_FIT < 1 ? -0.5 : 0;
+const HEX_NUDGE_Y = HEX_FIT < 1 ? -0.9 : 0;
 const HEX_CX = Math.min(0, VIS_HALF_W - gridW * HEX_FIT / 2) + HEX_NUDGE_X;
 const HEX_CY = -8 + HEX_NUDGE_Y;   // グリッドの中心の高さ（既定は -8）
 const hexCount = HEX_COLS * HEX_ROWS;
