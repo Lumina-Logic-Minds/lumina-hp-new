@@ -1566,12 +1566,19 @@ for (let i = 0; i < FINALE_COUNT; i++) {
    ========================================================= */
 const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
 const pointerNDC = new THREE.Vector2();
-window.addEventListener("pointermove", (e) => {
-  pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-  pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-  pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointerNDC.y = -((e.clientY / window.innerHeight) * 2 - 1);
-});
+/* 画面座標を3D空間の判定用座標に変換する。window ではなく canvas の実寸を基準に
+   するのは、モバイルではアドレスバーの開閉で window.innerHeight が変動し、
+   描画サイズとの間にずれが生じてタップ位置が合わなくなるため。 */
+function setPointerFrom(e) {
+  const r = canvas.getBoundingClientRect();
+  const nx = (e.clientX - r.left) / r.width;
+  const ny = (e.clientY - r.top) / r.height;
+  pointer.tx = (nx - 0.5) * 2;
+  pointer.ty = (ny - 0.5) * 2;
+  pointerNDC.x = nx * 2 - 1;
+  pointerNDC.y = -(ny * 2 - 1);
+}
+window.addEventListener("pointermove", setPointerFrom);
 // raycasting for clickable project cards (page navigation wired up later)
 const raycaster = new THREE.Raycaster();
 let hoveredCard = null;
@@ -1606,15 +1613,26 @@ function closeCardModal() {
 }
 modalEl.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeCardModal));
 window.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalOpen) closeCardModal(); });
-window.addEventListener("click", (e) => {
-  if (modalOpen || (e.target.closest && e.target.closest(".cardmodal, .nav"))) return;
+/* カードを開く判定。click ではなく pointerdown/up の組で見ている。
+   カードは DOM 要素ではなく canvas 内の3Dオブジェクトなので、タップ時に click が
+   届かないことがある。また hoveredCard（ホバー状態）は「乗せてから押す」マウスでしか
+   埋まらず、タップでは常に空になる。押した位置と離した位置を自前で見ることで、
+   マウスとタップの両方で同じように動く。 */
+let tapX = 0, tapY = 0, tapTracking = false;
+const TAP_SLOP = 12; // これ以上動いたらスクロール操作とみなし、タップとして扱わない
 
-  // hoveredCard はポインタの移動に反応して毎フレーム更新される。マウスなら
-  // 「乗せてから押す」ので値が入っているが、タップにはその段階が無く、判定が
-  // 走る前に click が来るため空のままになる（＝モバイルで開かなかった）。
-  // 押された座標から判定し直すことで、マウスでもタップでも同じように効く。
-  pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointerNDC.y = -((e.clientY / window.innerHeight) * 2 - 1);
+window.addEventListener("pointerdown", (e) => {
+  tapX = e.clientX; tapY = e.clientY; tapTracking = true;
+});
+
+window.addEventListener("pointerup", (e) => {
+  if (!tapTracking) return;
+  tapTracking = false;
+  if (Math.hypot(e.clientX - tapX, e.clientY - tapY) > TAP_SLOP) return; // ドラッグ
+  if (modalOpen || unlocking) return;
+  if (e.target.closest && e.target.closest(".cardmodal, .nav, .chat")) return;
+
+  setPointerFrom(e);
   raycaster.setFromCamera(pointerNDC, camera);
 
   if (work.visible) {
@@ -1685,8 +1703,7 @@ function startUnlock() {
 window.addEventListener("click", (e) => {
   if (modalOpen || unlocking) return;
   if (!(scroll > 5.82 && scroll < 6.25)) return; // only while the gold wordmark is formed
-  pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointerNDC.y = -((e.clientY / window.innerHeight) * 2 - 1);
+  setPointerFrom(e); // canvas 基準（モバイルでの縦ずれを防ぐ）
   raycaster.setFromCamera(pointerNDC, camera);
   const hits = raycaster.intersectObjects(letterSprites, false);
   if (!hits.length) return;
