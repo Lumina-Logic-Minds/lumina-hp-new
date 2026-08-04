@@ -1608,8 +1608,22 @@ modalEl.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("cl
 window.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalOpen) closeCardModal(); });
 window.addEventListener("click", (e) => {
   if (modalOpen || (e.target.closest && e.target.closest(".cardmodal, .nav"))) return;
-  if (hoveredCard) openCardModal(hoveredCard.userData.project);
-  else if (finaleCardHot) openCardModal(finaleProject);
+
+  // hoveredCard はポインタの移動に反応して毎フレーム更新される。マウスなら
+  // 「乗せてから押す」ので値が入っているが、タップにはその段階が無く、判定が
+  // 走る前に click が来るため空のままになる（＝モバイルで開かなかった）。
+  // 押された座標から判定し直すことで、マウスでもタップでも同じように効く。
+  pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointerNDC.y = -((e.clientY / window.innerHeight) * 2 - 1);
+  raycaster.setFromCamera(pointerNDC, camera);
+
+  if (work.visible) {
+    const hit = raycaster.intersectObjects(cards, false)[0];
+    if (hit && hit.object.userData.project) { openCardModal(hit.object.userData.project); return; }
+  }
+  if (finaleCard.visible && raycaster.intersectObject(fcVideo, false).length) {
+    openCardModal(finaleProject);
+  }
 });
 
 // bottom-left navigator links open the same service modal as the Work cards
