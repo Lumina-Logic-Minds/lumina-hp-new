@@ -646,7 +646,7 @@ function makeCardTexture(title, tag, c1, c2, textOnly) {
 }
 const projects = [
   {
-    t: "AI活用型 Web・アプリケーション開発事業", g: "AI Web & App Development", a: "#13303d", b: "#0e7c7b",
+    t: "Web・アプリケーション開発事業", g: "Web & App Development", a: "#13303d", b: "#0e7c7b",
     video: "assets/videos/card1-opt.mp4",
     catch: "AIの力で、ホームページやアプリを「早く・安く・高品質」に",
     lead: "企画から実装、保守まで全工程に生成AIを導入。要件定義の高速化やコード生成を駆使し、従来の手法を凌駕する「短納期・高品質・低コスト」な開発を実現します。",
@@ -654,7 +654,7 @@ const projects = [
     more: "web-development.html", // 詳細ページ
   },
   {
-    t: "AIシステムインテグレーション・DX推進事業", g: "AI System Integration / DX", a: "#241f4a", b: "#6c5ce7",
+    t: "AIシステム導入・改善事業", g: "AI System Integration / Improvement", a: "#241f4a", b: "#6c5ce7",
     video: "assets/videos/card2-opt.mp4",
     catch: "会社の仕事のやり方を、AIでもっと楽に・賢く",
     lead: "業務課題の抽出からAI導入、定着化までトータルサポート。データ整備や業務フロー再構築にも踏み込み、ビジネスモデルそのものをAI前提へと変革させます。",
@@ -662,7 +662,7 @@ const projects = [
     more: "dx.html", // 詳細ページ
   },
   {
-    t: "データコンサルティング・MLソリューション事業", g: "Data Consulting / ML Solutions", a: "#3a1f3d", b: "#c84bd1",
+    t: "データ分析・業務活用事業", g: "Data Analysis / Business Application", a: "#3a1f3d", b: "#c84bd1",
     video: "assets/videos/card3-opt.mp4",
     catch: "会社に眠っているデータから、「売上アップのヒント」を見つけ出す",
     lead: "ビッグデータ解析や特化型ML（機械学習）モデルの構築により、データから利益を創出。需要予測やリスク管理など、経営判断に直結する「データドリブン経営」を支援します。",
@@ -680,7 +680,7 @@ const projects = [
 ];
 // GPU事業はWorkの周回カードから外し、Finaleで粒子が形成する「ヒーローカード」になる
 const finaleProject = {
-  t: "GPUインフラ・コンピューティング事業", g: "GPU Infrastructure / Computing", a: "#0f2a2c", b: "#2bb3a3",
+  t: "GPU環境構築・運用事業", g: "GPU Environment / Operations", a: "#0f2a2c", b: "#2bb3a3",
   video: "assets/videos/card4-opt.mp4",
   catch: "AIを動かす「超高性能なコンピュータ環境」を、すぐ使える状態で提供",
   lead: "世界的に不足する高性能GPUサーバー環境を構築し、計算資源を安定提供。環境最適化や保守運用を含めたマネージドサービスを展開し、インフラ面からAI開発を支えます。",
