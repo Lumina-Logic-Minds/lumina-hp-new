@@ -2355,7 +2355,16 @@ function animate() {
   if (launching) {
     const e = clock.elapsedTime - launchStart;
     const gather   = smoothstep(0.0, 0.9, e);   // 光が中央へ集まる
-    const form     = smoothstep(0.9, 1.8, e);   // ロケット実体化
+    // ロケットの出現。じわっと不透明度を上げると「滲み出る」ように見えるので、
+    // 閃光がピークに達した 0.62 から 0.26 秒で一気に出しきる。form が短いぶん、
+    // 見え方は下の flashPop（閃光が弾ける）と punch（登場直後の伸び）が作る。
+    const form     = smoothstep(0.62, 0.88, e);
+    // 出現の瞬間だけロケットを進行方向へ引き伸ばす。0 に戻るまで 0.5 秒。
+    // 静止画で見ると歪むが、動くと「弾き出された」ように読める。
+    const punch    = 1.0 - smoothstep(0.62, 1.12, e);
+    // 収束点の閃光。立ち上がり 0.12 秒と鋭く、引きは 0.55 秒と長く。
+    // ロケット（form）はこの山の直後に出るので、光の中から現れて見える。
+    const flashPop = smoothstep(0.50, 0.62, e) * (1.0 - smoothstep(0.62, 1.17, e));
     // 貫通フラッシュは「ロケットが実際に惑星（z=-72）へ届く瞬間」に合わせる。
     // 下の ft の係数 2.1 だと到達は e≒3.95。ここを動かすなら両方あわせること。
     const breakT   = smoothstep(3.70, 3.95, e) * (1.0 - smoothstep(3.95, 4.40, e));
@@ -2368,34 +2377,58 @@ function animate() {
     if (landed) { scroll = targetScroll = LAUNCH_LAND; }
 
     if (!landed) {
+      /* 発動位置のシーンを丸ごと畳む。scroll は着地まで発動位置のまま止めて
+         いるので、放っておくとその場所の景色（背骨とカード、GPU の部屋、
+         About の文章など）が宇宙の中に残り、ロケットに重なって見えなくなる。
+         個別に条件を足すと必ず取りこぼすため、飛行中はここで一括して消す。 */
+      work.visible = false;
+      room.visible = false;
+      finaleCard.visible = false;
+      logo.visible = false;
+      glow.visible = false;
+      forest.visible = false;
+      // DOM のテキストも同様（3D ではないので canvas の暗転では隠れない）。
+      // About は is-in ではなく clipPath で出し入れしているので、切り抜きを潰す。
+      aboutEl.style.clipPath = "polygon(0 0,0 0,0 0,0 0)";
+      chatEl.classList.remove("is-in");
+      document.getElementById("seatext").classList.remove("is-in");
+      document.getElementById("company").classList.remove("is-in");
+
       // --- 飛行中はロケットだけを見せる（既存の travelAt を時間軸だけ詰めて流用）
-      // 管理画面版の travelAt をそのまま使い、時間軸だけ 2.1 倍に詰める。
-      // この係数で惑星（z=-72）への到達が e≒3.95 になり、上の breakT と合う。
-      const ft = Math.max(0, e - 0.9) * 2.1 + 0.9;
+      // 管理画面版の travelAt をそのまま使い、時間軸だけ 1.92 倍に詰める。
+      // 起点はロケットが現れる 0.62。ここを 0.9 のままにすると、出現してから
+      // 動き出すまで 0.28 秒その場に留まり、せっかくの勢いが死ぬ。
+      // 係数 1.92 で惑星（z=-72）への到達がちょうど e=3.95 になり、上の breakT
+      // の山と一致する。起点か係数を動かすときは、必ず両方あわせて計算し直すこと。
+      const ft = Math.max(0, e - 0.62) * 1.9244 + 0.9;
       const tr = travelAt(ft);
-      const lag = smoothstep(1.8, 4.4, e) * 78.0;
+      // カメラが引き離される量。ロケットが飛び出す 0.62 から効かせる（1.8 起点
+      // のままだと、出た直後の一番速く見せたい 1 秒が等距離の追尾になってしまう）。
+      const lag = smoothstep(0.9, 4.4, e) * 78.0;
       camera.position.x = THREE.MathUtils.lerp(launchCam.x, tr.x, gather);
       camera.position.y = THREE.MathUtils.lerp(launchCam.y, tr.y + 2.5, gather);
       camera.position.z = THREE.MathUtils.lerp(launchCam.z, tr.z + 12.0 + lag, gather);
       camera.lookAt(tr.x, tr.y, tr.z);
-      const shake = form * (1 - smoothstep(2.4, 3.2, e)) * 0.05 + breakT * 0.2;
+      // 登場の瞬間に一撃ぶん揺らす（punch）。以降は飛行中の微振動と貫通の衝撃。
+      const shake = form * (1 - smoothstep(2.4, 3.2, e)) * 0.05 + punch * 0.06 + breakT * 0.2;
       camera.position.x += Math.sin(e * 55.0) * shake;
       camera.position.y += Math.cos(e * 61.0) * shake;
       camera.fov = 42 + gather * 16 * (1 - smoothstep(2.6, 3.6, e));
       camera.updateProjectionMatrix();
 
-      bloom.strength = 0.45 + gather * 0.2 + breakT * 0.45;
-      rgbPass.uniforms.amount.value = gather * 0.002 + breakT * 0.003;
+      // 登場の閃光にブルームと色収差を乗せる。ここが一番強く光る瞬間になる。
+      bloom.strength = 0.45 + gather * 0.2 + flashPop * 0.5 + breakT * 0.45;
+      rgbPass.uniforms.amount.value = gather * 0.002 + flashPop * 0.004 + breakT * 0.003;
       scene.fog.color.setRGB(0.02, 0.06, 0.11);
       scene.fog.density = 0.02;
       scene.background.setRGB(0.01, 0.03, 0.06);
 
-      // 収束点の閃光 -> ロケットが生まれる
-      const asm = smoothstep(0.75, 0.95, e) * (1.0 - smoothstep(1.1, 1.6, e));
-      coreSprite.visible = asm > 0.01;
+      // 収束点の閃光（flashPop は上で定義。ブルームにも乗せている）
+      coreSprite.visible = flashPop > 0.01;
       coreSprite.position.set(tr.x, tr.y, tr.z);
-      coreSprite.material.opacity = asm * 0.22;
-      coreSprite.scale.setScalar(3.2);
+      coreSprite.material.opacity = flashPop * 0.55;
+      // 光は弾けたあと広がりながら薄れる（一定サイズだと「点灯」に見える）
+      coreSprite.scale.setScalar(1.2 + (1.0 - flashPop) * 7.5 * smoothstep(0.55, 1.2, e) + flashPop * 3.0);
 
       // すれ違う星の粒。カメラ(z≒0)を e≒2.8 で通過し、貫通フラッシュ(3.95)の
       // 前に抜けきる。飛行中の速度感はここが担う。
@@ -2406,13 +2439,23 @@ function animate() {
       rocketOuter.visible = form > 0.01;
       rocketOuter.position.set(tr.x, tr.y, tr.z);
       rocketOuter.rotation.set(ROCKET_PITCH, ROCKET_YAW, e * 0.15);
+      // 登場の瞬間だけ進行方向(z)へ伸ばし、横をすぼめる。すぐ等倍へ戻るので
+      // 歪みには見えず、「前へ弾き出された」勢いとして読める。
+      rocketOuter.scale.set(1.0 - punch * 0.35, 1.0 - punch * 0.35, 1.0 + punch * 1.6);
+      // 出た直後だけリムライトを強く焚いて輪郭を立て、飛行中はいったん落として
+      // 遠ざかるにつれて再び強める（既存の recede の役割はそのまま）。
       const recede = smoothstep(1.9, 4.2, e);
-      rocketRimMat.uniforms.uStrength.value = recede * 2.2;
+      rocketRimMat.uniforms.uStrength.value = recede * 2.2 + punch * 2.6;
       for (let k = 0; k < rocketMats.length; k++) rocketMats[k].opacity = rocketMats[k].__op * form;
     } else {
       // --- 着地: 宇宙の小道具を全部畳んで、通常の会社概要の絵に戻す
       spaceEnv.visible = false; planetsEnv.visible = false;
       rocketOuter.visible = false; coreSprite.visible = false;
+      // 飛行中に伏せた森と About の切り抜きを戻す。他（work/room/logo など）は
+      // 毎フレーム scroll から計算し直されるので、ここで触る必要はない。
+      forest.visible = true;
+      aboutEl.style.clipPath = "";
+      rocketOuter.scale.set(1, 1, 1); // 登場時の引き伸ばしを次回へ持ち越さない
       camera.fov = 42; camera.updateProjectionMatrix();
       bloom.strength = 0.45;
       rgbPass.uniforms.amount.value = 0;
@@ -2462,6 +2505,9 @@ window.addEventListener("pageshow", (ev) => {
     rgbPass.uniforms.amount.value = 0;
     coreSprite.visible = false;
     spaceEnv.visible = false; planetsEnv.visible = false; rocketOuter.visible = false;
+    forest.visible = true;          // 飛行中に伏せたので戻す
+    aboutEl.style.clipPath = "";
+    rocketOuter.scale.set(1, 1, 1); // 登場時の引き伸ばしが残らないように
     scroll = targetScroll = LAUNCH_LAND;
   }
 
