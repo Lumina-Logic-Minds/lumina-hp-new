@@ -1629,7 +1629,7 @@ window.addEventListener("pointerup", (e) => {
   if (!tapTracking) return;
   tapTracking = false;
   if (Math.hypot(e.clientX - tapX, e.clientY - tapY) > TAP_SLOP) return; // ドラッグ
-  if (modalOpen || unlocking) return;
+  if (modalOpen || unlocking || launching) return;
   if (e.target.closest && e.target.closest(".cardmodal, .nav, .chat")) return;
 
   setPointerFrom(e);
@@ -1699,6 +1699,45 @@ function startUnlock() {
   unlockCam.copy(camera.position);
   letterFlash[0] = letterFlash[1] = letterFlash[2] = 1.6; // three letters blaze
 }
+
+/* ---- COMPANY launch: the same rocket flight, but it lands on the company
+   section instead of leaving for the login page. -------------------------
+   隠しコマンド版（unlocking）とは別のフラグで動かす。共通部分を関数に
+   切り出すと既存の演出まで壊しかねないため、描画側は `launching` の分岐を
+   足すだけにして、管理画面への経路のコードパスは一切変えていない。
+
+   ワードマークの粒子は使わない。COMPANY はどのスクロール位置からでも押せる
+   ので、粒子（scroll > 1.88 にしか居ない）を前提にすると成立しないため。
+   代わりにナビの COMPANY 自体が光の線になって中央へ収束し、そこからロケット
+   が組み上がる。 */
+let launching = false, launchStart = 0;
+// 着地（暗転しきって会社概要へ切り替わった）以降かどうか。sea の表示判定が
+// launching ブロックより前に走るため、フラグとして持っておく必要がある。
+let launchLanded = false;
+const launchCam = new THREE.Vector3();
+const LAUNCH_END = 5.6;            // 全体の尺（秒）
+const LAUNCH_LAND = 7.25;          // 着地点＝会社概要
+// ナビの COMPANY から飛ぶ光の筋。DOM ではなく canvas 上に描くので、
+// 3D の暗転やブルームと同じ画面の中で完結する。
+const trailEl = document.createElement("div");
+trailEl.id = "navtrail";
+document.body.appendChild(trailEl);
+function startLaunch(fromEl) {
+  if (launching || unlocking) return;
+  launching = true;
+  launchLanded = false;
+  launchStart = clock.elapsedTime;
+  launchCam.copy(camera.position);
+  // 押されたピルの位置から光が走り出す。画面中央（ロケットの生成点）へ向かう。
+  const r = fromEl.getBoundingClientRect();
+  trailEl.style.setProperty("--x", (r.left + r.width / 2).toFixed(1) + "px");
+  trailEl.style.setProperty("--y", (r.top + r.height / 2).toFixed(1) + "px");
+  // 2回目以降のために確実に頭出しする。クラスを外して即座に付け直すだけでは
+  // ブラウザが同一フレームの変更をまとめてしまい、アニメーションが再生されない。
+  trailEl.classList.remove("is-firing");
+  void trailEl.offsetWidth; // 強制的にレイアウトを確定させ、再生をリセットする
+  trailEl.classList.add("is-firing");
+}
 // click the first letters L / L / M (x5 each, in order) on the formed wordmark
 window.addEventListener("click", (e) => {
   if (modalOpen || unlocking) return;
@@ -1726,7 +1765,7 @@ const EASE_IDLE = 0.06; // normal wheel/touch feel
 const EASE_JUMP = 0.13; // while a nav jump is in flight (~0.6s end to end)
 let scrollEase = EASE_IDLE;
 window.addEventListener("wheel", (e) => {
-  if (modalOpen || unlocking) return; // freeze the experience while a modal is open / unlocking
+  if (modalOpen || unlocking || launching) return; // freeze while a modal is open / in flight
   targetScroll += e.deltaY * 0.00035; // slower: more scroll distance = more time to watch
   targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll));
   scrollEase = EASE_IDLE; // manual input cancels a nav jump's boosted easing
@@ -1735,7 +1774,7 @@ window.addEventListener("wheel", (e) => {
 let touchY = null;
 window.addEventListener("touchstart", (e)=>{ touchY = e.touches[0].clientY; }, {passive:true});
 window.addEventListener("touchmove", (e)=>{
-  if (modalOpen || unlocking) return;
+  if (modalOpen || unlocking || launching) return;
   if (touchY !== null){ targetScroll += (touchY - e.touches[0].clientY) * 0.0010; touchY = e.touches[0].clientY;
     targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll)); scrollEase = EASE_IDLE; }
 }, {passive:true});
@@ -1748,21 +1787,27 @@ window.addEventListener("touchmove", (e)=>{
    card) counts as Work since it is project content, and the underwater
    wordmark reads as the run-up to Company. */
 const NAV_SECTIONS = [
-  // Top の着地点は 0 ではなく 1.55。0 はロゴだけで読ませる文章が無いため、
+  // Top の着地点は 0 ではなく 1.68。0 はロゴだけで読ませる文章が無いため、
   // About の文章が出ている位置を「トップ」として見せる。
   // About の項目を外したぶん、点灯範囲は Top が 1.88 まで引き継ぐ。
-  { id: "top",     at: 1.55, from: 0.00, to: 1.88 },
+  // ※ 実際に使われるのは index.html の data-scroll。at はそれと同じ値の控え。
+  { id: "top",     at: 1.68, from: 0.00, to: 1.88 },
   { id: "work",    at: 2.25, from: 1.88, to: 5.50 },
   { id: "company", at: 7.25, from: 5.50, to: SCROLL_MAX + 0.01 },
 ];
 // Matched by attribute rather than by position, so the markup can be reordered
 // or duplicated without this block needing to know about it.
 const navLinks = [...document.querySelectorAll("a[data-scroll][data-sec]")];
+// COMPANY はロケット演出を挟んで着地する。押すたびに毎回再生する。
 navLinks.forEach((a) => {
   a.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation(); // don't let the card raycaster see this click
-    if (modalOpen || unlocking) return;
+    if (modalOpen || unlocking || launching) return;
+    if (a.dataset.sec === "company") {
+      startLaunch(a);
+      return; // scroll は演出の終盤で着地点へ差し替える
+    }
     targetScroll = Math.max(0, Math.min(SCROLL_MAX, parseFloat(a.dataset.scroll)));
     scrollEase = EASE_JUMP;
   });
@@ -1985,7 +2030,8 @@ function animate() {
   // --- Finale particles: orbit the spine, gather to the roof, then morph through
   //     three forms: (1) the GPU card shape, (2) the "Lumina Logic Minds" wordmark
   //     (underwater), (3) the hex-grid backing. ---
-  finale.visible = (scroll > 1.88 && scroll < 7.25) || unlocking; // hero particles
+  // hero particles。COMPANY のロケット演出中は粒子を使わないので出さない。
+  finale.visible = ((scroll > 1.88 && scroll < 7.25) || unlocking) && !launching;
   if (finale.visible && unlocking) {
     // ASCENSION: the wordmark particles assemble DIRECTLY into the rocket shape (no
     // intermediate blob), then hand off to the real rocket.glb which charges on.
@@ -2092,7 +2138,10 @@ function animate() {
 
   // --- Section 6 (Underwater): sea environment + teal fog ---
   const seaT = smoothstep(5.05, 5.55, scroll);
-  sea.visible = scroll > 5.0;
+  // COMPANY のロケット演出中、飛行のあいだは水中の景色を出さない。2回目以降は
+  // すでに会社概要（scroll 7.25）から発進するため、そのままだと宇宙の背後に
+  // 水面とヘックスグリッドが residual で映り込む。着地後は通常どおり表示する。
+  sea.visible = scroll > 5.0 && !(launching && !launchLanded);
   if (sea.visible) {
     waterMat.uniforms.uTime.value = t;
     const bpos = bubGeo.attributes.position.array;
@@ -2114,7 +2163,10 @@ function animate() {
     // hex grid: fade in + cursor ripple (flag-like)
     hexMesh.visible = true;
     hexMat.uniforms.uTime.value = t;
-    hexMat.uniforms.uReveal.value = smoothstep(6.70, 7.20, scroll); // tiles appear after particles gather
+    // tiles appear after particles gather。COMPANY のロケット演出中は着地時に
+    // scroll を 7.25 へ飛ばすため、ここで計算すると 1.0 になってタイルが一瞬で
+    // 出てしまう。演出側（launching ブロック）が立ち上がりを持つので譲る。
+    if (!launching) hexMat.uniforms.uReveal.value = smoothstep(6.70, 7.20, scroll);
     raycaster.setFromCamera(pointerNDC, camera);
     const hit = raycaster.ray.intersectPlane(_hexPlane, _hexHit);
     let inGrid = 0;
@@ -2291,6 +2343,98 @@ function animate() {
     if (e >= 7.5) { unlocking = false; window.location.href = "login.html"; }
   }
 
+  /* --- COMPANY launch (~5.6s): the same flight, but it lands on the company
+     section instead of leaving the page. Timings are compressed because this
+     is in-site navigation, not a farewell. ---------------------------------
+     0.0-0.9  ナビから走った光が中央へ収束（CSS の #navtrail）
+     0.9-1.8  収束点でロケットが組み上がる
+     1.8-3.7  宇宙を進む / すれ違う星の粒 / 惑星が近づく
+     3.7-4.4  惑星を突き破るフラッシュ（到達 e≒3.95 が山）
+     4.4-5.0  暗転（この裏で scroll を会社概要へ差し替える）
+     5.0-5.6  ヘックスグリッドが立ち上がって明転 */
+  if (launching) {
+    const e = clock.elapsedTime - launchStart;
+    const gather   = smoothstep(0.0, 0.9, e);   // 光が中央へ集まる
+    const form     = smoothstep(0.9, 1.8, e);   // ロケット実体化
+    // 貫通フラッシュは「ロケットが実際に惑星（z=-72）へ届く瞬間」に合わせる。
+    // 下の ft の係数 2.1 だと到達は e≒3.95。ここを動かすなら両方あわせること。
+    const breakT   = smoothstep(3.70, 3.95, e) * (1.0 - smoothstep(3.95, 4.40, e));
+    const dark     = smoothstep(4.4, 5.0, e);   // 暗転
+    const back     = smoothstep(5.0, 5.6, e);   // 明転（会社概要）
+    const landed   = e >= 5.0;
+    launchLanded = landed; // sea の表示判定（このブロックより前）が参照する
+
+    // 暗転しきった時点で着地させる。明転したときには会社概要が出来上がっている。
+    if (landed) { scroll = targetScroll = LAUNCH_LAND; }
+
+    if (!landed) {
+      // --- 飛行中はロケットだけを見せる（既存の travelAt を時間軸だけ詰めて流用）
+      // 管理画面版の travelAt をそのまま使い、時間軸だけ 2.1 倍に詰める。
+      // この係数で惑星（z=-72）への到達が e≒3.95 になり、上の breakT と合う。
+      const ft = Math.max(0, e - 0.9) * 2.1 + 0.9;
+      const tr = travelAt(ft);
+      const lag = smoothstep(1.8, 4.4, e) * 78.0;
+      camera.position.x = THREE.MathUtils.lerp(launchCam.x, tr.x, gather);
+      camera.position.y = THREE.MathUtils.lerp(launchCam.y, tr.y + 2.5, gather);
+      camera.position.z = THREE.MathUtils.lerp(launchCam.z, tr.z + 12.0 + lag, gather);
+      camera.lookAt(tr.x, tr.y, tr.z);
+      const shake = form * (1 - smoothstep(2.4, 3.2, e)) * 0.05 + breakT * 0.2;
+      camera.position.x += Math.sin(e * 55.0) * shake;
+      camera.position.y += Math.cos(e * 61.0) * shake;
+      camera.fov = 42 + gather * 16 * (1 - smoothstep(2.6, 3.6, e));
+      camera.updateProjectionMatrix();
+
+      bloom.strength = 0.45 + gather * 0.2 + breakT * 0.45;
+      rgbPass.uniforms.amount.value = gather * 0.002 + breakT * 0.003;
+      scene.fog.color.setRGB(0.02, 0.06, 0.11);
+      scene.fog.density = 0.02;
+      scene.background.setRGB(0.01, 0.03, 0.06);
+
+      // 収束点の閃光 -> ロケットが生まれる
+      const asm = smoothstep(0.75, 0.95, e) * (1.0 - smoothstep(1.1, 1.6, e));
+      coreSprite.visible = asm > 0.01;
+      coreSprite.position.set(tr.x, tr.y, tr.z);
+      coreSprite.material.opacity = asm * 0.22;
+      coreSprite.scale.setScalar(3.2);
+
+      // すれ違う星の粒。カメラ(z≒0)を e≒2.8 で通過し、貫通フラッシュ(3.95)の
+      // 前に抜けきる。飛行中の速度感はここが担う。
+      spaceEnv.visible = e > 0.8;
+      spaceEnv.position.set(0, 2.5, THREE.MathUtils.lerp(-45, 32, smoothstep(1.0, 4.4, e)));
+      planetsEnv.visible = e > 1.2;
+
+      rocketOuter.visible = form > 0.01;
+      rocketOuter.position.set(tr.x, tr.y, tr.z);
+      rocketOuter.rotation.set(ROCKET_PITCH, ROCKET_YAW, e * 0.15);
+      const recede = smoothstep(1.9, 4.2, e);
+      rocketRimMat.uniforms.uStrength.value = recede * 2.2;
+      for (let k = 0; k < rocketMats.length; k++) rocketMats[k].opacity = rocketMats[k].__op * form;
+    } else {
+      // --- 着地: 宇宙の小道具を全部畳んで、通常の会社概要の絵に戻す
+      spaceEnv.visible = false; planetsEnv.visible = false;
+      rocketOuter.visible = false; coreSprite.visible = false;
+      camera.fov = 42; camera.updateProjectionMatrix();
+      bloom.strength = 0.45;
+      rgbPass.uniforms.amount.value = 0;
+      // 暗転の裏でカメラを会社概要の定位置へ「瞬間移動」させる。通常の追従は
+      // 毎フレーム 4% ずつしか寄らないので、宇宙の彼方から戻すと明転後も数秒
+      // 流れ続けてしまう。ここで嵌めておけば、明けた瞬間から静止して見える。
+      camera.position.set(pointer.x * 0.6, -8.0, 13.0);
+      camera.lookAt(0, -7.3, 0);
+    }
+
+    // 暗転 -> 明転。惑星を突き破った先がヘックスグリッドだった、という繋ぎ。
+    whiteoutEl.style.opacity = (landed ? 1 - back : dark).toFixed(3);
+    if (landed) hexMat.uniforms.uReveal.value = back; // タイルが立ち上がる
+
+    if (e >= LAUNCH_END) {
+      launching = false;
+      launchLanded = false;
+      whiteoutEl.style.opacity = 0;
+      trailEl.classList.remove("is-firing");
+    }
+  }
+
   composer.render();
 }
 animate();
@@ -2305,6 +2449,21 @@ window.addEventListener("pageshow", (ev) => {
   if (modalOpen) closeCardModal();
   hoveredCard = null;
   document.body.style.cursor = "";
+
+  // COMPANY のロケット演出の途中で離脱して戻ってきた場合。演出は時計基準で
+  // 進むため、放置すると凍った画面のまま復帰する。着地点に置いて畳んでおく。
+  if (launching) {
+    launching = false;
+    launchLanded = false;
+    trailEl.classList.remove("is-firing");
+    whiteoutEl.style.opacity = 0;
+    camera.fov = 42; camera.updateProjectionMatrix();
+    bloom.strength = 0.45; bloom.radius = 0.6;
+    rgbPass.uniforms.amount.value = 0;
+    coreSprite.visible = false;
+    spaceEnv.visible = false; planetsEnv.visible = false; rocketOuter.visible = false;
+    scroll = targetScroll = LAUNCH_LAND;
+  }
 
   // Everything below is only for returning from login.html via the hidden
   // ascension: the page was frozen mid-whiteout and would thaw on that frame.
