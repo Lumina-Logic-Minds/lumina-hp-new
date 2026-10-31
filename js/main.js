@@ -1656,6 +1656,10 @@ document.querySelectorAll(".chat__list a").forEach((a, i) => {
 // Returning from a sub-page (e.g. reskilling.html) lands back where it left off.
 // Keys match the ?back=... value each sub-page links with; values are positions on
 // the same 0..SCROLL_MAX timeline the top-right nav jumps to.
+// スクロールできる一番上。ヘッダーの TOP と同じ About の位置。
+// 0 〜 SCROLL_MIN（リング → 森 → About）は初回訪問時のオープニングとして自動再生し、
+// その後はスクロールで戻れないようにする。
+const SCROLL_MIN = 1.68;
 let RETURN_TO = null;
 try {
   RETURN_TO = sessionStorage.getItem("llm:back");
@@ -1663,8 +1667,8 @@ try {
 } catch (e) {}
 if (!RETURN_TO) RETURN_TO = new URLSearchParams(location.search).get("back"); // 旧リンク用
 const RETURN_SCROLL = {
-  top:        0,      // reskilling.html のロゴ
-  about:      1.55,
+  top:        SCROLL_MIN, // reskilling.html のロゴ
+  about:      SCROLL_MIN,
   work:       2.25,
   // 各事業カードが正面に来る位置（2.25 から 0.35 刻み。projects の並び順と対応）
   "web-development": 2.25,
@@ -1678,10 +1682,17 @@ const RETURN_SCROLL = {
   company:    7.25,
   // contact / privacy-policy / tokusho のリンクは「← トップへ戻る」表記なので、
   // 文脈上の近い位置ではなく表示どおり先頭に戻す（ラベルと挙動を一致させる）
-  contact:    0,
-  legal:      0,
+  contact:    SCROLL_MIN,
+  legal:      SCROLL_MIN,
 };
-let scroll = 0, targetScroll = 0;
+// 初回訪問（ローディング画面が出るとき）だけ 0 から始めてオープニングを流す。
+// リロード・戻る・サブページからの復帰は index.html 側で skip-intro が付くので、
+// オープニングを出さずに SCROLL_MIN から始める。
+const INTRO = !document.documentElement.classList.contains("skip-intro");
+const INTRO_DURATION = 5500; // ms。0 → SCROLL_MIN にかける時間
+let introPlaying = INTRO;    // 再生が終わるまでホイール・タッチ・ナビを受け付けない
+let introStart = 0;          // ローディングが明けた時刻（0 のあいだは開始待ち）
+let scroll = INTRO ? 0 : SCROLL_MIN, targetScroll = scroll;
 if (RETURN_TO) {
   if (RETURN_SCROLL[RETURN_TO] != null) scroll = targetScroll = RETURN_SCROLL[RETURN_TO]; // else start at top
   history.replaceState({}, "", location.pathname); // clear ?back= so a later reload starts at top
@@ -1765,18 +1776,18 @@ const EASE_IDLE = 0.06; // normal wheel/touch feel
 const EASE_JUMP = 0.13; // while a nav jump is in flight (~0.6s end to end)
 let scrollEase = EASE_IDLE;
 window.addEventListener("wheel", (e) => {
-  if (modalOpen || unlocking || launching) return; // freeze while a modal is open / in flight
+  if (modalOpen || unlocking || launching || introPlaying) return; // freeze while a modal is open / in flight
   targetScroll += e.deltaY * 0.00035; // slower: more scroll distance = more time to watch
-  targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll));
+  targetScroll = Math.max(SCROLL_MIN, Math.min(SCROLL_MAX, targetScroll));
   scrollEase = EASE_IDLE; // manual input cancels a nav jump's boosted easing
 }, { passive: true });
 // touch scroll
 let touchY = null;
 window.addEventListener("touchstart", (e)=>{ touchY = e.touches[0].clientY; }, {passive:true});
 window.addEventListener("touchmove", (e)=>{
-  if (modalOpen || unlocking || launching) return;
+  if (modalOpen || unlocking || launching || introPlaying) return;
   if (touchY !== null){ targetScroll += (touchY - e.touches[0].clientY) * 0.0010; touchY = e.touches[0].clientY;
-    targetScroll = Math.max(0, Math.min(SCROLL_MAX, targetScroll)); scrollEase = EASE_IDLE; }
+    targetScroll = Math.max(SCROLL_MIN, Math.min(SCROLL_MAX, targetScroll)); scrollEase = EASE_IDLE; }
 }, {passive:true});
 
 /* ---- Top-right nav ------------------------------------------------------
@@ -1787,8 +1798,8 @@ window.addEventListener("touchmove", (e)=>{
    card) counts as Work since it is project content, and the underwater
    wordmark reads as the run-up to Company. */
 const NAV_SECTIONS = [
-  // Top の着地点は 0 ではなく 1.68。0 はロゴだけで読ませる文章が無いため、
-  // About の文章が出ている位置を「トップ」として見せる。
+  // Top の着地点は 1.68（= SCROLL_MIN、スクロールできる一番上）。
+  // 0 〜 1.68 は初回のオープニングとして自動再生する区間。
   // About の項目を外したぶん、点灯範囲は Top が 1.88 まで引き継ぐ。
   // ※ 実際に使われるのは index.html の data-scroll。at はそれと同じ値の控え。
   { id: "top",     at: 1.68, from: 0.00, to: 1.88 },
@@ -1803,12 +1814,12 @@ navLinks.forEach((a) => {
   a.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation(); // don't let the card raycaster see this click
-    if (modalOpen || unlocking || launching) return;
+    if (modalOpen || unlocking || launching || introPlaying) return;
     if (a.dataset.sec === "company") {
       startLaunch(a);
       return; // scroll は演出の終盤で着地点へ差し替える
     }
-    targetScroll = Math.max(0, Math.min(SCROLL_MAX, parseFloat(a.dataset.scroll)));
+    targetScroll = Math.max(SCROLL_MIN, Math.min(SCROLL_MAX, parseFloat(a.dataset.scroll)));
     scrollEase = EASE_JUMP;
   });
 });
@@ -1875,6 +1886,12 @@ function animate() {
   const t = clock.elapsedTime;
 
   // smooth scroll + pointer
+  if (introPlaying) {
+    // オープニング: 時間で 0 → SCROLL_MIN を進める（緩やかに始まり緩やかに止まる）
+    const k = introStart ? Math.min(1, (performance.now() - introStart) / INTRO_DURATION) : 0;
+    scroll = targetScroll = SCROLL_MIN * (0.5 - 0.5 * Math.cos(Math.PI * k));
+    if (k >= 1) introPlaying = false;
+  }
   scroll += (targetScroll - scroll) * scrollEase;
   if (scrollEase !== EASE_IDLE && Math.abs(targetScroll - scroll) < 0.01) scrollEase = EASE_IDLE;
   updateNavActive();
@@ -2552,6 +2569,10 @@ if (document.documentElement.classList.contains("skip-intro")) {
     barEl.style.width = prog + "%";
   }, 180);
   function reveal() {
-    setTimeout(() => { loaderEl.classList.add("is-done"); showChrome(); }, 400);
+    setTimeout(() => {
+      loaderEl.classList.add("is-done"); showChrome();
+      // ローダーのフェードアウト（約1.2秒）が半分ほど進んだところでオープニングを始める
+      setTimeout(() => { introStart = performance.now(); }, 600);
+    }, 400);
   }
 }
